@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "regimeshift"
+version = "3.1.0"
+description = "Geometric complexity in cyclic regime changes: full, fundamental-subspace and shared-orbit MDL detectors"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Mac Mayo" }]
+keywords = [
+    "minimum description length", "changepoint", "cyclic groups",
+    "representation theory", "information geometry", "model selection",
+]
+dependencies = ["numpy>=1.24", "scipy>=1.10", "pandas>=2.0"]
+
+[project.optional-dependencies]
+test = ["pytest>=7.4"]
+
+[project.scripts]
+regimeshift = "regimeshift.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["regimeshift*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "slow: statistical validation requiring a Monte Carlo run (deselect with -m 'not slow')",
+]
