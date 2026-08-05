@@ -166,9 +166,15 @@ scenario slides toward being an orbit:
 | 6 | 0.40 effects | `approximate_orbit` 93% |
 
 So the scenario meant to represent Model B's territory does not hold its
-distance from Model C's hypothesis constant across `m`. See
-[`docs/paper-notes.md`](docs/paper-notes.md) for what that implies for the
-manuscript's `m`-dependent results.
+distance from Model C's hypothesis constant across `m`, and any `m`-dependence
+in results from it is confounded with that drift.
+
+The `independent_fundamental_fixed_distance` scenario fixes it, holding the
+orbit distance at 1.5 effects for every `m` — and on it the selector recovers
+`fundamental` 100% of the time at every group order. The manuscript's version is
+kept unchanged so the reproduction stays faithful. See
+[`docs/paper-notes.md`](docs/paper-notes.md), including the geometric reason a
+fixed radius ratio could never have held the distance constant.
 
 ## How to describe this work
 

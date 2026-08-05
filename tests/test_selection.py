@@ -187,15 +187,21 @@ def test_orbit_distance_is_monotone_in_group_order():
 def test_independent_fundamental_is_best_described_by_different_models_at_different_m(m, expected):
     """The consequence, and the reason ``generating_family_for_scenario`` is
     bookkeeping rather than ground truth: at ``m = 3`` the scenario really is a
-    Model B change, but by ``m = 6`` it sits 0.40 effects from an orbit and an
-    approximate-orbit code describes it better."""
+    subspace change, but by ``m = 6`` it sits 0.40 effects from an orbit and an
+    approximate-orbit code describes it better.
+
+    At ``m = 3`` the expected answer arrives as a *tie* with ``full``, because
+    there the fundamental component is the whole tangent space and the two are
+    the same model."""
     segments = build_segments(m, "independent_fundamental", 0.25)
     rng = np.random.default_rng(m * 13)
-    picks = collections.Counter(
-        select_model(counts(segments.p_left, 3200, rng), counts(segments.p_right, 3200, rng), m).selected
-        for _ in range(30)
-    )
-    assert picks.most_common(1)[0][0] == expected, picks
+    hits = 0
+    for _ in range(30):
+        result = select_model(
+            counts(segments.p_left, 3200, rng), counts(segments.p_right, 3200, rng), m
+        )
+        hits += expected in result.tied
+    assert hits >= 24, f"m={m}: {expected} chosen or tied in {hits}/30"
 
 
 # --------------------------------------------------------------------------
@@ -247,3 +253,120 @@ def test_unknown_scenario_has_no_recorded_family():
         generating_family_for_scenario("not_a_scenario")
     assert generating_family_for_scenario("approximate_orbit", deviation=0.0) == "shared_orbit"
     assert generating_family_for_scenario("approximate_orbit", deviation=0.5) == "approximate_orbit"
+
+
+# --------------------------------------------------------------------------
+# the fix: hold the orbit distance constant instead of the angle
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("m", [2, 3, 4, 5, 6, 7, 8])
+def test_fixed_distance_scenario_holds_its_orbit_distance(m):
+    """The corrected variant sits exactly ``INDEPENDENT_ORBIT_DISTANCE`` effects
+    from the nearest orbit at every group order, where the manuscript's version
+    slides from 1.12 down to 0.40."""
+    from regimeshift.scenarios import INDEPENDENT_ORBIT_DISTANCE
+
+    segments = build_segments(m, "independent_fundamental_fixed_distance", 0.25)
+    assert orbit_distance(segments) == pytest.approx(INDEPENDENT_ORBIT_DISTANCE, abs=1e-9)
+    assert segments.planted_shift is None
+    for s in range(m):
+        assert not np.allclose(segments.p_right, np.roll(segments.p_left, s), atol=1e-6)
+
+
+def test_fixed_distance_is_flat_where_the_manuscript_version_drifts():
+    drifting = [
+        orbit_distance(build_segments(m, "independent_fundamental", 0.25)) for m in (3, 4, 5, 6)
+    ]
+    fixed = [
+        orbit_distance(build_segments(m, "independent_fundamental_fixed_distance", 0.25))
+        for m in (3, 4, 5, 6)
+    ]
+    assert max(drifting) - min(drifting) > 0.6
+    assert max(fixed) - min(fixed) < 1e-9
+
+
+@pytest.mark.parametrize("m", [3, 4, 5, 6])
+def test_holding_the_distance_requires_leaving_the_left_radius(m):
+    """Not a design choice but a geometric fact, and the reason the manuscript's
+    fixed radius ratio could not have held the distance either: adjacent orbit
+    points are ``2 sin(pi/m)`` apart, so on a circle of the same radius no point
+    is further than ``sin(pi/m)`` from all of them -- 0.5 effects at ``m = 6``."""
+    from regimeshift.scenarios import INDEPENDENT_ORBIT_DISTANCE
+
+    best_on_circle = np.sin(np.pi / m)
+    assert INDEPENDENT_ORBIT_DISTANCE > best_on_circle
+    segments = build_segments(m, "independent_fundamental_fixed_distance", 0.25)
+    assert np.linalg.norm(segments.theta_right) > np.linalg.norm(segments.theta_left)
+
+
+@pytest.mark.parametrize("m", [3, 4, 5, 6])
+def test_the_fix_removes_the_selection_drift(m):
+    """The point of the whole exercise. On the corrected scenario the selector
+    recovers ``fundamental`` at every group order, where on the manuscript's it
+    switches to ``approximate_orbit`` by ``m = 5``."""
+    segments = build_segments(m, "independent_fundamental_fixed_distance", 0.25)
+    rng = np.random.default_rng(m * 17)
+    hits = 0
+    for _ in range(25):
+        result = select_model(
+            counts(segments.p_left, 2400, rng), counts(segments.p_right, 2400, rng), m
+        )
+        # At m = 3 the fundamental component spans the whole tangent space, so
+        # "fundamental" and "full" are the same model and come back tied.
+        hits += "fundamental" in result.tied
+    assert hits >= 22, f"m={m}: {hits}/25"
+
+
+def test_an_unreachable_orbit_distance_is_rejected():
+    """Below ``sin(pi/m)`` the midpoint construction has no real radius."""
+    import regimeshift.scenarios as scenarios
+
+    original = scenarios.INDEPENDENT_ORBIT_DISTANCE
+    try:
+        scenarios.INDEPENDENT_ORBIT_DISTANCE = 0.1
+        with pytest.raises(ValueError, match="unreachable"):
+            scenarios.build_segments(3, "independent_fundamental_fixed_distance", 0.25)
+    finally:
+        scenarios.INDEPENDENT_ORBIT_DISTANCE = original
+
+
+@pytest.mark.parametrize("m", [2, 3])
+def test_full_and_fundamental_tie_where_they_are_the_same_model(m):
+    """At ``m = 2`` and ``m = 3`` the fundamental component spans the whole
+    nontrivial tangent space, so the two candidates describe one hypothesis.
+    Their code lengths must coincide, and the selector must report the tie
+    rather than picking between them on floating-point noise."""
+    segments = build_segments(m, "exact_orbit", 0.25)
+    rng = np.random.default_rng(m * 23)
+    for _ in range(8):
+        cL = counts(segments.p_left, 900, rng)
+        cR = counts(segments.p_right, 900, rng)
+        L = code_lengths(cL, cR, m)
+        assert L["full"] == pytest.approx(L["fundamental"], abs=1e-8)
+        result = select_model(cL, cR, m)
+        if "fundamental" in result.tied or "full" in result.tied:
+            assert {"full", "fundamental"} <= set(result.tied)
+
+
+@pytest.mark.parametrize("m", [4, 5, 6])
+def test_full_and_fundamental_are_distinguishable_above_m_three(m):
+    segments = build_segments(m, "exact_orbit", 0.25)
+    rng = np.random.default_rng(m * 29)
+    cL = counts(segments.p_left, 1200, rng)
+    cR = counts(segments.p_right, 1200, rng)
+    L = code_lengths(cL, cR, m)
+    assert abs(L["full"] - L["fundamental"]) > 1.0
+
+
+def test_ties_break_toward_the_less_structured_candidate():
+    """A tie must never become a claim of structure the data cannot support."""
+    from regimeshift.selection import CANDIDATES as order
+
+    segments = build_segments(3, "exact_orbit", 0.25)
+    rng = np.random.default_rng(1)
+    result = select_model(counts(segments.p_left, 800, rng), counts(segments.p_right, 800, rng), 3)
+    if len(result.tied) > 1:
+        positions = [order.index(name) for name in result.tied]
+        assert positions == sorted(positions)
+        assert result.selected == result.tied[0]

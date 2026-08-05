@@ -365,10 +365,34 @@ an orbit as `m` increases, not a property of the detectors. It also explains, an
 quantifies, the earlier observation that Model C stays competitive there at
 `m = 6`: the data is only 0.40 effects from its hypothesis.
 
-The fix is to hold the angular offset at a fixed *fraction* of `2 pi / m`, or to
-hold the orbit distance itself constant, rather than fixing it in radians. This
-implementation keeps the manuscript's constant so the reproduction stays
-faithful; `tests/test_selection.py` pins the drift so it cannot go unnoticed.
+### The fix
+
+`independent_fundamental_fixed_distance` holds the orbit distance constant at
+`INDEPENDENT_ORBIT_DISTANCE = 1.5` effects for every `m`, and on it the selector
+recovers `fundamental` 100% of the time at `m = 3, 4, 5, 6` — the drift is gone.
+
+The construction places the right coordinate at the angular midpoint between
+adjacent orbit points, then solves the radius so the distance to the nearest is
+exactly the target. Its radius necessarily exceeds the left one, increasingly so
+with `m`, and that is forced rather than chosen: adjacent orbit points sit
+`2 sin(pi/m)` apart, so on a circle of the same radius no point can be more than
+`sin(pi/m)` from all of them — only 0.5 effects at `m = 6`. **Holding the
+distance constant therefore requires leaving that circle**, which is also why
+no choice of fixed radius ratio in the manuscript's parameterisation could have
+held it.
+
+The manuscript's `independent_fundamental` is kept unchanged so the reproduction
+stays faithful; the drift and the fix are both pinned by
+`tests/test_selection.py`.
+
+### A related degeneracy worth knowing
+
+At `m = 2` and `m = 3` the fundamental component *is* the whole nontrivial
+tangent space, so `full` and `fundamental` are the same hypothesis and their
+code lengths agree to ~1e-12. Selecting between them reads floating-point noise.
+`select_model` therefore reports ties in `Selection.tied` and breaks them toward
+the less structured candidate, so a tie never becomes a claim of structure the
+data cannot support.
 
 ## Not implemented
 

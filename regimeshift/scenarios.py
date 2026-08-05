@@ -15,6 +15,11 @@ Three scenarios exercise the three levels of geometric constraint:
     placing signal outside the fundamental component. A misspecification test
     for Models B and C.
 
+``independent_fundamental_fixed_distance``
+    The same hypothesis as ``independent_fundamental``, but holding the distance
+    from the nearest exact orbit constant across group orders instead of fixing
+    an angle in radians. See :data:`INDEPENDENT_ORBIT_DISTANCE`.
+
 ``approximate_orbit``
     Section 14.1: ``eta_R = R eta_L + delta``, a one-step orbit plus a
     controllable deviation *inside* the fundamental subspace. ``deviation = 0``
@@ -46,12 +51,19 @@ __all__ = [
     "INDEPENDENT_ANGLE_RAD",
     "INDEPENDENT_M2_FACTOR",
     "HIGHER_MODE_FACTOR",
+    "INDEPENDENT_ORBIT_DISTANCE",
     "MANUSCRIPT_CONSTANTS",
     "Segments",
     "build_segments",
 ]
 
-SCENARIOS = ("exact_orbit", "independent_fundamental", "higher_mode", "approximate_orbit")
+SCENARIOS = (
+    "exact_orbit",
+    "independent_fundamental",
+    "independent_fundamental_fixed_distance",
+    "higher_mode",
+    "approximate_orbit",
+)
 
 #: Radius ratio of the right coordinate in the independent-fundamental scenario.
 INDEPENDENT_RADIUS_FACTOR = 0.72
@@ -61,6 +73,22 @@ INDEPENDENT_ANGLE_RAD = 0.713
 INDEPENDENT_M2_FACTOR = -0.55
 #: Amplitude of the higher mode, as a multiple of the effect size.
 HIGHER_MODE_FACTOR = 0.85
+
+#: Distance from the nearest exact orbit, in units of the effect, for the
+#: ``independent_fundamental_fixed_distance`` scenario.
+#:
+#: The manuscript's ``independent_fundamental`` fixes an angular offset of 0.713
+#: radians while the one-step rotation ``2 pi / m`` *shrinks* with ``m``, so the
+#: scenario slides toward being an orbit: its distance from the nearest orbit
+#: falls from 1.12 effects at ``m = 3`` to 0.40 at ``m = 6``. Since that distance
+#: is exactly the signal a shared-orbit fit cannot capture, the scenario becomes
+#: progressively easier for Model C as ``m`` grows, and any m-dependence in
+#: results from it is confounded with that drift.
+#:
+#: This variant holds the distance fixed instead. 1.5 sits firmly in Model B's
+#: territory: the README's deviation sweep puts the approximate-orbit code ahead
+#: from roughly 0.5 to 1.0, and Model B ahead beyond about 1.5.
+INDEPENDENT_ORBIT_DISTANCE = 1.5
 
 #: Machine-readable provenance for each scenario constant taken from the source
 #: manuscript: value, manuscript section, and how it was obtained.
@@ -190,6 +218,38 @@ def build_segments(m: int, scenario: str, effect: float, deviation: float = 0.0)
         p_left = probabilities(theta_left, m)
         p_right = probabilities(theta_right, m)
         return Segments(m, scenario, effect, p_left, p_right, theta_left, theta_right, 1)
+
+    if scenario == "independent_fundamental_fixed_distance":
+        # Place the right coordinate at the angular midpoint between adjacent
+        # orbit points -- as far from every one of them in angle as possible --
+        # then solve the radius so the distance to the nearest is exactly
+        # INDEPENDENT_ORBIT_DISTANCE effects.
+        #
+        # The radius must exceed the left one, and increasingly so with m. That
+        # is forced, not a choice: adjacent orbit points sit 2 sin(pi/m) apart,
+        # so on a circle of the same radius no point can be further than
+        # sin(pi/m) from all of them -- only 0.5 effects at m = 6. Holding the
+        # distance constant therefore requires leaving that circle, which is
+        # also why the manuscript's fixed radius ratio could not have held it.
+        target = INDEPENDENT_ORBIT_DISTANCE
+        if m == 2:
+            # d = 1: the only orbit point is -theta_L, so |rho + 1| = target.
+            theta_right = (target - 1.0) * theta_left
+        else:
+            half = np.pi / m
+            cos_half = np.cos(half)
+            discriminant = cos_half**2 - 1.0 + target**2
+            if discriminant < 0:
+                raise ValueError(
+                    f"INDEPENDENT_ORBIT_DISTANCE={target} is unreachable at m={m}; "
+                    f"it must be at least sin(pi/m) = {np.sin(half):.3f}"
+                )
+            radius = cos_half + np.sqrt(discriminant)
+            angle = 1.5 * (2.0 * np.pi / m)
+            theta_right = radius * effect * np.array([np.cos(angle), np.sin(angle)])
+        p_left = probabilities(theta_left, m)
+        p_right = probabilities(theta_right, m)
+        return Segments(m, scenario, effect, p_left, p_right, theta_left, theta_right, None)
 
     if scenario == "independent_fundamental":
         if m == 2:

@@ -53,7 +53,9 @@ __all__ = [
     "generating_family_for_scenario",
 ]
 
-#: Candidate hypotheses, in increasing order of structure.
+#: Candidate hypotheses, in increasing order of structure. The order is also the
+#: tie-break order in :func:`select_model`: less structured first, so a tie never
+#: becomes a claim of structure the data cannot support.
 CANDIDATES = (
     "null_full",
     "null_fundamental",
@@ -111,6 +113,15 @@ class Selection:
     """Whether the selected candidate is an alternative rather than a null."""
     selected_shift: int | None
     """Relative group element, when the selected candidate has one."""
+    tied: tuple[str, ...] = ()
+    """Candidates whose code length is indistinguishable from the selected one.
+
+    Usually just the selection itself. It has more than one entry when two
+    candidates describe the *same* hypothesis: at ``m = 2`` and ``m = 3`` the
+    fundamental component spans the whole nontrivial tangent space, so ``full``
+    and ``fundamental`` are the same model and their code lengths agree to
+    numerical precision. Selecting between them would be reading floating-point
+    noise, so the tie is reported instead."""
 
     @property
     def margin(self) -> float:
@@ -197,17 +208,28 @@ def select_model(
     m: int,
     deviation_scale: float = 0.05,
     candidates: tuple[str, ...] = CANDIDATES,
+    tie_tolerance: float = 1e-8,
 ) -> Selection:
     """Pick the candidate geometry with the shortest total description length.
 
     This answers both questions at once -- whether a change occurred, and what
     kind -- without being told the answer to the second.
+
+    Candidates within ``tie_tolerance`` nats of the best are treated as tied and
+    reported in :attr:`Selection.tied`. Ties are broken toward the *less*
+    structured candidate, in :data:`CANDIDATES` order, so a tie never becomes a
+    claim of structure the data cannot support. This matters at ``m = 2`` and
+    ``m = 3``, where ``full`` and ``fundamental`` are literally the same model.
     """
     lengths = code_lengths(counts_left, counts_right, m, deviation_scale, candidates)
-    selected = min(lengths, key=lengths.get)
+    best = min(lengths.values())
+    tied = tuple(name for name in candidates if name in lengths
+                 and lengths[name] - best <= tie_tolerance)
+    selected = tied[0]
     return Selection(
         selected=selected,
         code_lengths=lengths,
         declared_change=selected in ALTERNATIVES,
         selected_shift=_selected_shift(selected, counts_left, counts_right, m, deviation_scale),
+        tied=tied,
     )
