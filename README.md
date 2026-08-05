@@ -71,7 +71,7 @@ python -m regimeshift run --grid production --out results/v3 --workers 16
 
 Each configuration carries a deterministic, content-derived seed, so results do
 not depend on worker count or completion order, and runs resume from the
-checkpoint file. Four reports are written:
+checkpoint file. Six reports are written:
 
 | File | Contents |
 |---|---|
@@ -79,6 +79,8 @@ checkpoint file. Four reports are written:
 | `score_regression_summary.csv` | raw-score regression coefficients vs predictions |
 | `crossover_estimates.csv` | estimated 50%-power crossover lengths |
 | `crossover_ratio_summary.csv` | median practical sample-length ratios |
+| `crossover_bootstrap.csv` | bootstrap confidence intervals for those lengths |
+| `crossover_ratio_bootstrap.csv` | bootstrap intervals for the median ratios |
 
 ## Testing
 
@@ -102,6 +104,10 @@ pytest -m "not slow"           # ~2 minutes
 - Model C's penalty is constant in `n` while the regular penalties grow at
   `d/2` per `log n` — the contrast that gives the claim its content
 - the local Jensen–Shannon coefficient `(1 - cos(2 pi / m)) / 4`
+- the `penalty_slope = d/2 - residual_slope` identity, to 1e-8
+- weighted and unweighted regressions agree; optimiser convergence failures are
+  counted and asserted zero; the penalty slope is invariant to the split
+  fraction while its intercept shifts by `(d/2) log(rho (1 - rho))`
 - population gains: zero under no change, equal for B and C on exact orbits,
   strictly smaller for C on independent changes, and degraded for both
   constrained families under higher-mode misspecification
@@ -134,6 +140,10 @@ seeded.
   observations on matched data — and *lose* under higher-mode misspecification.
   The advantage is conditional on structural correctness, and the test suite
   asserts both directions.
+* The empirical penalty slope decomposes exactly as `d/2 - s`, where `s` is the
+  raw gain's departure from `n G`. For Model C, `d = 0`, so its residual
+  log-length slope is *entirely* a property of the likelihood gain — shift
+  maximisation and finite-sample bias — not a hidden dimension penalty.
 * Model C's penalty does not grow with `n`, which cuts both ways: its raw
   zero-threshold rule is *not* conservative under the null (at `m = 2` the label
   cost is exactly zero), which is why every comparison here is made at a common

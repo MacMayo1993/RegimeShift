@@ -30,6 +30,9 @@ from .fourier import (
 
 __all__ = [
     "DetectorResult",
+    "GRADIENT_TOLERANCE",
+    "fit_failure_count",
+    "reset_fit_failures",
     "split_penalty",
     "label_cost",
     "multinomial_loglik",
@@ -58,6 +61,34 @@ class DetectorResult:
     """Continuous-dimension increment of the alternative."""
     selected_shift: int | None = None
     """Relative group element chosen by the shared-orbit detector."""
+
+
+GRADIENT_TOLERANCE = 1e-6
+"""Relative first-order tolerance defining a converged fundamental-family fit."""
+
+_FIT_FAILURES = 0
+"""Count of fundamental-family fits whose best optimiser run did not converge.
+
+The population gains used as regressors are themselves obtained by numerical
+optimisation, so a silent convergence failure would corrupt a likelihood with no
+visible symptom. Every fit checks ``OptimizeResult.success`` and increments this
+counter; :func:`~regimeshift.simulation.run_config` reports the per-configuration
+total, and the test suite asserts it stays at zero across the grid.
+
+The counter is process-local, which is what the parallel runner needs: each
+worker accumulates the failures of the configurations it ran.
+"""
+
+
+def reset_fit_failures() -> None:
+    """Zero the convergence-failure counter for this process."""
+    global _FIT_FAILURES
+    _FIT_FAILURES = 0
+
+
+def fit_failure_count() -> int:
+    """Number of non-converged fits since the last reset in this process."""
+    return _FIT_FAILURES
 
 
 def split_penalty(dim: int, n_left: int, n_right: int) -> float:
@@ -129,7 +160,8 @@ def fit_fundamental(counts: np.ndarray, m: int, n_restarts: int = 2) -> tuple[np
     start = (B - B.mean(axis=0, keepdims=True)).T @ freq
     starts = [start, np.zeros(d)][:max(1, n_restarts)]
 
-    best_theta, best_ll = None, -np.inf
+    n = counts.sum()
+    best_theta, best_ll, best_ok = None, -np.inf, False
     for x0 in starts:
         res = minimize(
             _neg_loglik_and_grad,
@@ -141,6 +173,17 @@ def fit_fundamental(counts: np.ndarray, m: int, n_restarts: int = 2) -> tuple[np
         )
         if -res.fun > best_ll:
             best_ll, best_theta = -res.fun, res.x
+            # Judge convergence on the first-order condition, not on
+            # OptimizeResult.success: under our deliberately tight ftol,
+            # L-BFGS-B reports ABNORMAL whenever its line search cannot improve
+            # at machine precision, which routinely happens *at* the optimum
+            # (observed gradient norms ~5e-8). The gradient is
+            # B^T (counts - n p), so it scales with n and the test is relative.
+            best_ok = bool(res.success) or np.abs(res.jac).max() <= GRADIENT_TOLERANCE * max(1.0, n)
+
+    if not best_ok:
+        global _FIT_FAILURES
+        _FIT_FAILURES += 1
     return best_theta, float(best_ll)
 
 

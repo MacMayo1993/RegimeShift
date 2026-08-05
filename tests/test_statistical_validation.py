@@ -22,10 +22,14 @@ import pandas as pd
 import pytest
 
 from regimeshift.analysis import (
+    crossover_bootstrap,
     crossover_estimates,
+    crossover_ratio_bootstrap,
     crossover_ratio_summary,
+    gain_residual_regression,
     predicted_slope,
     score_regression,
+    score_regression_summary,
 )
 from regimeshift.runner import run_grid
 from regimeshift.simulation import build_grid
@@ -305,3 +309,117 @@ def test_every_configuration_produced_a_finite_score(results):
     assert np.isfinite(results["mean_score"]).all()
     assert np.isfinite(results["critical_value"]).all()
     assert results["power_calibrated"].between(0.0, 1.0).all()
+
+
+# --------------------------------------------------------------------------
+# analysis integrity, on real Monte Carlo output
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("detector,scenario", [
+    ("full", "higher_mode"),
+    ("fundamental", "independent_fundamental"),
+    ("shared_orbit", "exact_orbit"),
+])
+@pytest.mark.parametrize("m", [4, 6])
+def test_weighted_and_unweighted_slopes_agree(results, detector, scenario, m):
+    """The review's concern that the reported slopes might be artifacts of an
+    unweighted fit on few aggregate design points. Monte Carlo-variance
+    weighting must not move a slope enough to change its interpretation."""
+    subset = results[
+        (results["detector"] == detector) & (results["scenario"] == scenario) & (results["m"] == m)
+    ]
+    ols = score_regression(subset)
+    wls = score_regression(subset, weighted=True)
+    assert wls["method"] == "wls"
+    assert abs(wls["penalty_slope"] - ols["penalty_slope"]) < 0.4
+    # Both must still sit on the correct side of the neighbouring predictions.
+    predicted = predicted_slope(detector, m)
+    assert abs(wls["penalty_slope"] - predicted) < 0.45
+
+
+def test_design_is_not_badly_conditioned(results):
+    """`n * gain` and `log n` are both deterministic in length within an effect,
+    so the design's conditioning is worth reporting rather than assuming."""
+    summary = score_regression_summary(results)
+    assert summary["condition_number"].max() < 5000
+
+
+@pytest.mark.parametrize("detector,scenario", [
+    ("full", "higher_mode"),
+    ("fundamental", "independent_fundamental"),
+    ("shared_orbit", "exact_orbit"),
+])
+@pytest.mark.parametrize("m", [4, 6])
+def test_penalty_slope_identity_holds_on_real_output(results, detector, scenario, m):
+    """``penalty_slope = d/2 - residual_slope`` is an algebraic identity, so it
+    must hold to numerical precision on simulated output too. It decomposes each
+    empirical slope into the exact penalty we subtract and the raw gain's
+    departure from ``n * G``."""
+    subset = results[
+        (results["detector"] == detector) & (results["scenario"] == scenario) & (results["m"] == m)
+    ]
+    score = score_regression(subset)["penalty_slope"]
+    residual = gain_residual_regression(subset)["residual_slope"]
+    assert predicted_slope(detector, m) - residual == pytest.approx(score, abs=1e-8)
+
+
+@pytest.mark.parametrize("m", [2, 4, 6])
+def test_gain_residual_slopes_are_small_for_every_detector(results, m):
+    """Theory says the maximised gain is ``n * G + O(1)``, so the residual
+    log-length slope should be near zero for all three detectors -- including
+    the full detector, whose large penalty slope comes from the exact penalty
+    rather than from any drift in its gain."""
+    for detector, scenario in (
+        ("full", "higher_mode" if m >= 4 else "exact_orbit"),
+        ("fundamental", "independent_fundamental"),
+        ("shared_orbit", "exact_orbit"),
+    ):
+        subset = results[
+            (results["detector"] == detector)
+            & (results["scenario"] == scenario)
+            & (results["m"] == m)
+        ]
+        residual = gain_residual_regression(subset)["residual_slope"]
+        assert abs(residual) < 0.5, f"{detector} m={m}: residual slope {residual}"
+
+
+def test_crossover_intervals_are_produced_and_contain_their_estimates(results):
+    boot = crossover_bootstrap(results, n_boot=200)
+    internal = boot[boot["status"] == "internal"].dropna(subset=["ci_low", "ci_high"])
+    assert len(internal) > 5
+    for _, row in internal.iterrows():
+        assert row["ci_low"] <= row["crossover_length"] <= row["ci_high"]
+
+
+def test_shared_orbit_advantage_survives_its_uncertainty_interval(results):
+    """Table 6's headline claim, with the uncertainty the manuscript omits: the
+    shared/full crossover ratio must stay below one across the bootstrap, not
+    merely at the point estimate."""
+    boot = crossover_ratio_bootstrap(results, scenario="exact_orbit", n_boot=300)
+    boot = boot.set_index("m")
+    for m in (4, 6):
+        assert boot.loc[m, "shared_orbit/full_boot_n"] > 100
+        assert boot.loc[m, "shared_orbit/full_ci_high"] < 1.0
+
+
+def test_no_optimizer_failures_anywhere_in_the_grid(results):
+    assert results["optimizer_failures"].sum() == 0
+
+
+def test_penalty_slope_is_invariant_to_the_split_fraction():
+    """Section 4.2 predicts that rho moves only the bounded term. This is the
+    empirical check the manuscript never ran: the same configurations at a
+    balanced and a 1:3 split must give the same log-length coefficient."""
+    slopes = {}
+    for rho in (0.5, 0.25):
+        configs = build_grid(
+            groups=(4,), scenarios=("higher_mode",), effects=EFFECTS,
+            segment_lengths=(100, 200, 400, 800), n_alt=N_ALT, n_null=N_NULL,
+            split_fractions=(rho,),
+        )
+        frame = run_grid(configs, workers=4)
+        slopes[rho] = score_regression(frame[frame["detector"] == "full"])["penalty_slope"]
+    assert abs(slopes[0.5] - slopes[0.25]) < 0.4
+    for slope in slopes.values():
+        assert slope == pytest.approx(predicted_slope("full", 4), abs=0.45)

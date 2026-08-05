@@ -20,7 +20,7 @@ from typing import Sequence
 
 import numpy as np
 
-from .detectors import run_all_detectors
+from .detectors import fit_failure_count, reset_fit_failures, run_all_detectors
 from .gains import population_gains
 from .scenarios import Segments, build_segments
 
@@ -47,23 +47,49 @@ class Config:
     scenario: str
     effect: float
     segment_length: int
-    """Length of *each* side; total length is twice this."""
+    """Length of the *left* segment. With the default balanced split the right
+    segment matches it and the total is twice this."""
     n_alt: int = 500
     n_null: int = 1000
     alpha: float = 0.05
+    split_fraction: float = 0.5
+    """Fraction ``rho`` of the total length falling in the left segment.
+
+    Section 4.2 predicts that ``rho`` shifts only the bounded term of the
+    complexity increment, leaving the coefficient of ``log n`` at ``d/2``. The
+    default 0.5 reproduces the manuscript's balanced design exactly."""
+
+    def __post_init__(self) -> None:
+        if not 0.0 < self.split_fraction < 1.0:
+            raise ValueError(f"split_fraction must lie in (0, 1), got {self.split_fraction}")
+        if self.n_right <= 0:
+            raise ValueError("split_fraction leaves the right segment empty")
+
+    @property
+    def n_left(self) -> int:
+        return self.segment_length
 
     @property
     def total_length(self) -> int:
-        return 2 * self.segment_length
+        return int(round(self.segment_length / self.split_fraction))
+
+    @property
+    def n_right(self) -> int:
+        return self.total_length - self.segment_length
 
     @property
     def key(self) -> tuple:
-        return (self.m, self.scenario, self.effect, self.segment_length)
+        return (self.m, self.scenario, self.effect, self.segment_length, self.split_fraction)
 
 
 def config_seed(config: Config, base_seed: int = BASE_SEED) -> int:
     """Deterministic per-configuration seed, independent of grid ordering."""
     payload = f"{base_seed}|{config.m}|{config.scenario}|{config.effect!r}|{config.segment_length}"
+    # The split fraction joins the payload only when it is not the balanced
+    # default, so adding this field left every existing balanced-split seed --
+    # and therefore every existing checkpoint -- unchanged.
+    if config.split_fraction != 0.5:
+        payload += f"|{config.split_fraction!r}"
     # SHA-256 rather than hash(): stable across processes and Python runs.
     digest = hashlib.sha256(payload.encode()).digest()
     return int.from_bytes(digest[:8], "big") % (2**32 - 1)
@@ -85,8 +111,8 @@ def run_config(config: Config, base_seed: int = BASE_SEED, segments: Segments | 
     if segments is None:
         segments = build_segments(config.m, config.scenario, config.effect)
     rng = np.random.default_rng(config_seed(config, base_seed))
-    m, nL = config.m, config.segment_length
-    nR = config.segment_length
+    m, nL, nR = config.m, config.n_left, config.n_right
+    reset_fit_failures()
 
     null_scores = {name: np.empty(config.n_null) for name in DETECTOR_NAMES}
     p_null = segments.p_null
@@ -114,7 +140,8 @@ def run_config(config: Config, base_seed: int = BASE_SEED, segments: Segments | 
         if segments.planted_shift is not None:
             shift_hits[i] = float(results["shared_orbit"].selected_shift == segments.planted_shift)
 
-    gains = population_gains(segments.p_left, segments.p_right, m)
+    gains = population_gains(segments.p_left, segments.p_right, m, w_left=nL / (nL + nR))
+    failures = fit_failure_count()
 
     rows = []
     for name in DETECTOR_NAMES:
@@ -124,6 +151,9 @@ def run_config(config: Config, base_seed: int = BASE_SEED, segments: Segments | 
                 "scenario": config.scenario,
                 "effect": config.effect,
                 "segment_length": config.segment_length,
+                "split_fraction": config.split_fraction,
+                "n_left": nL,
+                "n_right": nR,
                 "total_length": config.total_length,
                 "detector": name,
                 "population_gain": gains[name],
@@ -143,6 +173,7 @@ def run_config(config: Config, base_seed: int = BASE_SEED, segments: Segments | 
                 "n_alt": config.n_alt,
                 "n_null": config.n_null,
                 "alpha": config.alpha,
+                "optimizer_failures": failures,
                 "seed": config_seed(config, base_seed),
             }
         )
@@ -157,6 +188,7 @@ def build_grid(
     n_alt: int = 500,
     n_null: int = 1000,
     alpha: float = 0.05,
+    split_fractions: Sequence[float] = (0.5,),
 ) -> list[Config]:
     """Cartesian design, skipping combinations a scenario does not support."""
     configs: list[Config] = []
@@ -166,5 +198,9 @@ def build_grid(
                 continue
             for effect in effects:
                 for length in segment_lengths:
-                    configs.append(Config(m, scenario, float(effect), int(length), n_alt, n_null, alpha))
+                    for rho in split_fractions:
+                        configs.append(
+                            Config(m, scenario, float(effect), int(length),
+                                   n_alt, n_null, alpha, float(rho))
+                        )
     return configs

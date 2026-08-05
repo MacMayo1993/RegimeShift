@@ -39,7 +39,7 @@ QUICK_GRID = {
     "n_null": 200,
 }
 
-_COLUMN_KEYS = ["m", "scenario", "effect", "segment_length", "detector"]
+_COLUMN_KEYS = ["m", "scenario", "effect", "segment_length", "split_fraction", "detector"]
 
 
 def load_checkpoint(path: str | os.PathLike | None) -> pd.DataFrame:
@@ -52,8 +52,15 @@ def load_checkpoint(path: str | os.PathLike | None) -> pd.DataFrame:
 def _pending(configs: Sequence[Config], done: pd.DataFrame) -> list[Config]:
     if done.empty:
         return list(configs)
+    # Checkpoints written before split_fraction existed are all balanced.
+    fractions = (
+        done["split_fraction"].astype(float)
+        if "split_fraction" in done.columns
+        else pd.Series(0.5, index=done.index)
+    )
     seen = set(
-        zip(done["m"], done["scenario"], done["effect"].astype(float), done["segment_length"])
+        zip(done["m"], done["scenario"], done["effect"].astype(float),
+            done["segment_length"], fractions)
     )
     return [c for c in configs if c.key not in seen]
 

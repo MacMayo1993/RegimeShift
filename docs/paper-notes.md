@@ -91,6 +91,73 @@ look like bugs until you see why they are not:
    share a null, `gain_B >= gain_C`. Both are asserted in
    `tests/test_detectors.py`.
 
+## Analysis-integrity work beyond the manuscript
+
+An external methodological review raised five concerns about the *analysis*
+rather than the models. All five are now addressed in code, and the fixes are
+pinned by `tests/test_analysis_integrity.py` plus Monte Carlo counterparts in
+the slow suite.
+
+**Weighted regression.** Each group-level regression has only
+`n_effects x n_lengths` aggregate design points, and those means have unequal
+Monte Carlo precision, so an unweighted fit can misstate both the slope and its
+standard error. `score_regression(..., weighted=True)` uses inverse
+`sd_score^2 / n_alt` weights, and the report now carries OLS and WLS side by
+side plus their disagreement (`weighting_shift`). On the validation grid the
+constrained detectors move by 0.02–0.05 — the reported slopes are not artifacts
+of the specification. The full detector at `m = 4` moves more, from 1.23 to
+1.46 against a prediction of 1.5, i.e. weighting *improves* agreement with
+theory. Design condition numbers (130–700) are now reported too.
+
+**The penalty slope is decomposable, exactly.** Because this implementation
+subtracts a penalty it computes exactly, the gain and penalty coefficients need
+not be estimated jointly. Writing the mean raw gain as `n G + a + s log n`,
+
+    penalty_slope = d/2 - s
+
+holds as an algebraic identity, where `s` (`gain_residual_regression`) is the
+only empirical quantity in it. This is worth stating plainly: **for Model C,
+`d = 0`, so the residual slopes of Table 5 are `-s` and nothing else.** They are
+a property of the maximised likelihood gain — shift maximisation and
+finite-sample MLE bias, exactly the causes Section 9.3 hypothesises — and not
+evidence of a hidden continuous-dimension penalty. The identity is asserted to
+1e-8 on both synthetic and simulated output.
+
+**Crossover uncertainty.** `crossover_bootstrap` and
+`crossover_ratio_bootstrap` resample the whole pipeline — power draw,
+cumulative-maximum stabilisation, interpolation, median across effects. Two
+limits are documented rather than hidden: the resampling covers binomial power
+noise but not the variability of the empirical 95th-percentile critical value,
+and detectors are resampled independently although they score the same datasets
+and are positively correlated, which makes the ratio intervals conservative.
+
+**Optimiser audit.** `fit_fundamental` now checks convergence and
+`run_config` reports `optimizer_failures` per configuration, asserted to be zero
+across the grid. Note the subtlety this exposed: judging convergence by
+`OptimizeResult.success` produces ~2.5% false alarms, because under our tight
+`ftol` L-BFGS-B reports `ABNORMAL` whenever its line search cannot improve at
+machine precision — which happens *at* the optimum, with observed gradient norms
+around 5e-8. Convergence is therefore judged on the first-order condition,
+relative to `n` since the gradient is `B^T (counts - n p)`.
+
+The audit also surfaced a second, separate property. When a category has zero
+count — routine on short segments — the fundamental MLE does not exist: the
+likelihood rises toward the simplex boundary and is asymptotically flat along
+that direction. Different optimiser starts then halt at very different
+coordinates (observed `|theta|` of 8 versus 15) **while agreeing on the
+log-likelihood to six decimals**. Since every detector consumes only
+likelihoods, scores are unaffected and start-independent, and both facts are
+pinned by tests. It does mean a fitted *coordinate* from a short segment should
+not be interpreted, and it is the reason the fit retains two starts even though
+the log-likelihood is concave in theta.
+
+**Split fraction.** `Config.split_fraction` makes rho a design dimension
+(`segment_length` is the left segment; the default 0.5 reproduces the balanced
+design and leaves every existing seed and checkpoint unchanged). This tests a
+prediction the manuscript makes but never checked: rho shifts only the bounded
+term `(d/2) log(rho (1 - rho))`, leaving the `log n` coefficient at `d/2`. Both
+the closed-form and Monte Carlo versions are asserted.
+
 ## Not implemented
 
 Scope limits carried over from Sections 11 and 13 of the manuscript:
