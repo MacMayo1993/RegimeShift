@@ -415,3 +415,43 @@ def test_detector_scores_are_start_independent():
                 det.fit_fundamental.__defaults__ = original
             for name, value in baseline.items():
                 assert value == pytest.approx(single[name], abs=1e-5), name
+
+
+# --------------------------------------------------------------------------
+# reconstructed-constant provenance
+# --------------------------------------------------------------------------
+
+
+def test_reconstructed_constants_match_the_live_module_values():
+    """External review flagged that exact reproduction depends on the constants
+    reconstructed from the image-rendered manuscript. The machine-readable
+    provenance table must therefore never drift from the code it describes."""
+    import regimeshift.scenarios as scenarios
+    from regimeshift.detectors import label_cost
+    from regimeshift.scenarios import RECONSTRUCTED_CONSTANTS
+
+    for name, entry in RECONSTRUCTED_CONSTANTS.items():
+        assert entry["basis"], f"{name} has no stated basis"
+        assert entry["section"], f"{name} has no manuscript section"
+        assert isinstance(entry["recovered_from_manuscript"], bool)
+        if name == "LABEL_COST":
+            # A formula rather than a scalar; check the implementation matches it.
+            for m in (2, 3, 5, 9):
+                assert label_cost(m) == pytest.approx(np.log(m - 1))
+            continue
+        assert entry["value"] == getattr(scenarios, name), f"{name} drifted from its table entry"
+
+
+def test_every_reconstructed_scenario_constant_is_documented():
+    """A new scenario constant must come with provenance, not appear silently."""
+    from regimeshift.scenarios import RECONSTRUCTED_CONSTANTS
+
+    documented = set(RECONSTRUCTED_CONSTANTS)
+    expected = {
+        "INDEPENDENT_RADIUS_FACTOR", "INDEPENDENT_ANGLE_RAD",
+        "INDEPENDENT_M2_FACTOR", "HIGHER_MODE_FACTOR", "LABEL_COST",
+    }
+    assert documented == expected
+    # Exactly one value was readable in the source document.
+    recovered = [k for k, v in RECONSTRUCTED_CONSTANTS.items() if v["recovered_from_manuscript"]]
+    assert recovered == ["INDEPENDENT_ANGLE_RAD"]

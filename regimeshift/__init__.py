@@ -35,7 +35,7 @@ from .fourier import (
     rotation_matrix,
 )
 from .gains import population_gains
-from .scenarios import Segments, build_segments
+from .scenarios import RECONSTRUCTED_CONSTANTS, Segments, build_segments
 from .simulation import BASE_SEED, Config, build_grid, run_config
 
 __version__ = "3.1.0"
@@ -45,6 +45,7 @@ __all__ = [
     "BASE_SEED",
     "Config",
     "DetectorResult",
+    "RECONSTRUCTED_CONSTANTS",
     "Segments",
     "build_grid",
     "build_segments",

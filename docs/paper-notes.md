@@ -36,7 +36,11 @@ Where that happened this implementation makes an explicit, documented choice:
 | Higher-mode amplitude | `0.8 x` effect | Section 8.2 gives "amplitude `rho` times the effect"; value was an image. |
 
 These constants live at the top of `regimeshift/scenarios.py` as named module
-constants so they can be changed in one place.
+constants so they can be changed in one place, and their provenance is also
+exported machine-readably as `regimeshift.RECONSTRUCTED_CONSTANTS` — value,
+manuscript section, whether the value was recoverable from the document, and
+the basis for the choice. A test asserts every entry matches the live constant,
+so this table cannot drift from the code.
 
 ## Deliberate deviations
 

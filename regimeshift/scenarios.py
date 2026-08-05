@@ -39,6 +39,7 @@ __all__ = [
     "INDEPENDENT_ANGLE_RAD",
     "INDEPENDENT_M2_FACTOR",
     "HIGHER_MODE_FACTOR",
+    "RECONSTRUCTED_CONSTANTS",
     "Segments",
     "build_segments",
 ]
@@ -53,6 +54,59 @@ INDEPENDENT_ANGLE_RAD = 0.713
 INDEPENDENT_M2_FACTOR = -0.6
 #: Amplitude of the higher mode, as a multiple of the effect size.
 HIGHER_MODE_FACTOR = 0.8
+
+#: Machine-readable provenance for every constant that had to be reconstructed
+#: because the source manuscript renders its equations as images.
+#:
+#: External review noted that exact numerical reproduction depends on these
+#: assumptions, and asked for them in text *or machine-readable form*. This is
+#: that form: value, manuscript section, whether the value was recoverable from
+#: the document, and the basis for the choice. A test asserts each entry matches
+#: the live module constant, so the table cannot drift from the code.
+RECONSTRUCTED_CONSTANTS = {
+    "INDEPENDENT_RADIUS_FACTOR": {
+        "value": INDEPENDENT_RADIUS_FACTOR,
+        "section": "8.2",
+        "recovered_from_manuscript": False,
+        "basis": (
+            "Section 8.2 specifies a radius ratio 'rho times the left radius'; the "
+            "numeral was an image. Any ratio away from 1, combined with the angular "
+            "offset, breaks the orbit relation, which is what the scenario requires."
+        ),
+    },
+    "INDEPENDENT_ANGLE_RAD": {
+        "value": INDEPENDENT_ANGLE_RAD,
+        "section": "8.2",
+        "recovered_from_manuscript": True,
+        "basis": "Stated in readable body text.",
+    },
+    "INDEPENDENT_M2_FACTOR": {
+        "value": INDEPENDENT_M2_FACTOR,
+        "section": "8.2",
+        "recovered_from_manuscript": False,
+        "basis": (
+            "Section 8.2 gives a scalar ratio for m = 2; the numeral was an image. "
+            "The sign matters: -1 would BE the exact orbit rather than violate it."
+        ),
+    },
+    "HIGHER_MODE_FACTOR": {
+        "value": HIGHER_MODE_FACTOR,
+        "section": "8.2",
+        "recovered_from_manuscript": False,
+        "basis": "Section 8.2 gives 'amplitude rho times the effect'; the numeral was an image.",
+    },
+    "LABEL_COST": {
+        "value": "log(m - 1)",
+        "section": "7.3",
+        "recovered_from_manuscript": False,
+        "basis": (
+            "Section 7.3 states the alternative ranges over nonidentity shifts and that "
+            "m = 2 has a single one. log(m - 1) is the uniform code over that set and "
+            "gives the stated zero cost at m = 2. It is one legitimate two-part code, "
+            "not a uniquely determined MDL constant."
+        ),
+    },
+}
 
 
 @dataclass(frozen=True)

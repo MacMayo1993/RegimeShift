@@ -25,6 +25,39 @@ with `d_fund = 1` for `m = 2` (the sign representation) and `d_fund = 2` for
 through *parameter sharing*, and that is why its leading logarithmic coefficient
 is zero rather than merely small.
 
+## How to describe this work
+
+The defensible claim, and the wording two rounds of external methodological
+review converged on:
+
+> This work proposes and validates a **known-boundary** MDL comparison for
+> categorical cyclic regime changes, distinguishing unrestricted independent
+> changes, independent changes within the fundamental invariant subspace, and
+> shared-state exact-orbit transitions. The shared-orbit alternative has no
+> additional continuous parameter across the boundary and therefore no leading
+> `log n` continuous-dimension penalty, paying only a discrete
+> nonidentity-shift label cost. The advantage is conditional on structural
+> correctness and is evaluated under common null calibration.
+
+Four qualifications belong with it, and are enforced by the tests rather than
+left to prose:
+
+* **Known boundary, not changepoint discovery.** Every detector is scored at a
+  supplied boundary. Unknown-boundary scanning would add a location cost and a
+  search/multiplicity effect to *all three* detectors; applying it to one would
+  confound boundary multiplicity with model dimension (Section 4.3).
+* **The novelty is the synthesis, not the ingredients.** MDL/BIC penalties,
+  categorical changepoint methods, and Fourier decompositions of cyclic actions
+  are each well established. What is distinctive is the MDL separation of
+  *dimension reduction* (Model B) from *parameter sharing* (Model C).
+* **Model C is a structural detector, not a universally better one.** Its
+  advantage holds when the change really is close to a cyclic shift of a shared
+  state, and it collapses toward chance when the change leaves the fundamental
+  subspace.
+* **BIC-style, not exact universal coding.** The penalties are known-split
+  regular increments; KT/Dirichlet mixtures and NML are not implemented, so no
+  claim of exact codelength optimality is made.
+
 ## Install
 
 ```bash
