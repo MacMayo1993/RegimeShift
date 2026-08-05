@@ -1,4 +1,4 @@
-"""The three known-boundary detectors (Models A, B and C of the manuscript).
+"""The known-boundary detectors (Models A, B and C of the manuscript, plus D).
 
 Model A -- full independent change: each segment gets an unrestricted
 multinomial parameter. Continuous-dimension increment ``m - 1``.
@@ -10,9 +10,13 @@ Model C -- shared exact-orbit transition: both segments share one continuous
 state and differ only by a relative cyclic shift. Continuous-dimension
 increment zero; the alternative pays only a discrete relative-label code.
 
-All three detectors are scored as ``maximised log-likelihood gain minus an
-explicit complexity increment``, in nats, at a *known* boundary. No location
-cost is applied to any detector (Section 4.3).
+Model D -- approximate orbit (Section 14.1): a shared state plus a relative
+shift plus a *shrunk* deviation, interpolating between C and B. Not part of the
+manuscript's production comparison; see ``approximate_orbit_detector``.
+
+Every detector is scored as ``maximised log-likelihood gain minus an explicit
+complexity increment``, in nats, at a *known* boundary. No location cost is
+applied to any detector (Section 4.3).
 """
 
 from __future__ import annotations
@@ -24,6 +28,7 @@ from scipy.optimize import minimize
 
 from .fourier import (
     fourier_design_matrix,
+    rotation_matrix as _rotation,
     full_dimension,
     fundamental_dimension,
 )
@@ -43,6 +48,9 @@ __all__ = [
     "full_detector",
     "fundamental_detector",
     "shared_orbit_detector",
+    "approximate_orbit_detector",
+    "fit_approximate_orbit",
+    "deviation_penalty",
     "run_all_detectors",
     "DETECTORS",
 ]
@@ -280,3 +288,133 @@ DETECTORS = {
 def run_all_detectors(counts_left: np.ndarray, counts_right: np.ndarray, m: int) -> dict[str, DetectorResult]:
     """Score one dataset with all three detectors."""
     return {name: fn(counts_left, counts_right, m) for name, fn in DETECTORS.items()}
+
+
+# --------------------------------------------------------------------------
+# Model D: approximate orbit (Section 14.1)
+# --------------------------------------------------------------------------
+
+
+def deviation_penalty(dim: int, n_right: int, deviation_scale: float) -> float:
+    """Codelength for a shrunk deviation vector, in nats.
+
+    Section 14.1 interpolates between Models B and C with
+    ``eta_R = R^r eta_L + delta`` under "a shrinkage prior or code on delta".
+    Taking that code to be a Gaussian prior ``delta ~ N(0, tau^2 I_d)`` and
+    applying the Laplace approximation gives
+
+        (d / 2) * log(1 + n_R * tau^2)
+
+    because the coordinates are Fisher-orthonormal, so the right segment
+    contributes information ``n_R`` per unit in each direction.
+
+    The two limits are exactly the models being interpolated:
+
+    * ``tau -> 0``  : cost 0, delta pinned at zero -- the exact orbit, Model C.
+    * ``tau -> inf``: cost ``(d/2) log(n_R tau^2)``, i.e. a leading ``(d/2) log n``
+      -- the independent-subspace rate of Model B. (The limit is improper; the
+      divergent ``d log tau`` is the price of an unbounded prior.)
+
+    Note what this does *not* do. For any **fixed** ``tau > 0`` the leading
+    coefficient is ``d/2`` -- Model B's, not something in between. The
+    interpolation lives in the bounded term, i.e. in the finite-sample regime,
+    which is exactly where "how much deviation can be tolerated" is a question.
+    A genuine interpolation of the *leading* coefficient needs ``tau`` shrinking
+    with ``n``.
+    """
+    if deviation_scale < 0:
+        raise ValueError(f"deviation_scale must be >= 0, got {deviation_scale}")
+    if n_right <= 0:
+        raise ValueError("the right segment must be non-empty")
+    if deviation_scale == 0:
+        return 0.0
+    return 0.5 * dim * float(np.log1p(n_right * deviation_scale**2))
+
+
+def _neg_joint_and_grad(params, counts_left, counts_right, B, rotation, tau2):
+    """Objective for one fixed shift: shared state plus a shrunk deviation."""
+    d = B.shape[1]
+    theta, delta = params[:d], params[d:]
+    right_coord = rotation @ theta + delta
+
+    nll_left, grad_left = _neg_loglik_and_grad(theta, counts_left, B)
+    nll_right, grad_right = _neg_loglik_and_grad(right_coord, counts_right, B)
+
+    value = nll_left + nll_right
+    grad_theta = grad_left + rotation.T @ grad_right
+    grad_delta = grad_right.copy()
+    if tau2 > 0:
+        value += 0.5 * float(delta @ delta) / tau2
+        grad_delta += delta / tau2
+    return value, np.concatenate([grad_theta, grad_delta])
+
+
+def fit_approximate_orbit(counts_left, counts_right, m: int, shift: int, deviation_scale: float):
+    """Fit ``eta_R = R^shift eta_L + delta`` with a Gaussian code on ``delta``.
+
+    Returns ``(theta, delta, penalised_loglik)``. With ``deviation_scale == 0``
+    the deviation is pinned at zero and this reduces exactly to the shared-orbit
+    fit of Model C.
+    """
+    cL = np.asarray(counts_left, dtype=float)
+    cR = np.asarray(counts_right, dtype=float)
+    d = fundamental_dimension(m)
+    rotation = _rotation(m, shift)
+
+    if deviation_scale == 0:
+        # delta == 0: aligned pooling, identical to Model C's fit.
+        theta, ll = fit_fundamental(cL + np.roll(cR, -shift), m)
+        return theta, np.zeros(d), ll
+
+    B = fourier_design_matrix(m)
+    tau2 = deviation_scale**2
+    theta0, _ = fit_fundamental(cL + np.roll(cR, -shift), m)
+    start = np.concatenate([theta0, np.zeros(d)])
+
+    res = minimize(
+        _neg_joint_and_grad,
+        start,
+        args=(cL, cR, B, rotation, tau2),
+        jac=True,
+        method="L-BFGS-B",
+        options={"maxiter": 1000, "ftol": 1e-14, "gtol": 1e-10},
+    )
+    n = cL.sum() + cR.sum()
+    if not (res.success or np.abs(res.jac).max() <= GRADIENT_TOLERANCE * max(1.0, n)):
+        global _FIT_FAILURES
+        _FIT_FAILURES += 1
+    return res.x[:d], res.x[d:], float(-res.fun)
+
+
+def approximate_orbit_detector(
+    counts_left: np.ndarray, counts_right: np.ndarray, m: int, deviation_scale: float = 0.1
+) -> DetectorResult:
+    """Model D: one shared state, a relative shift, and a *shrunk* deviation.
+
+    The alternative is ``eta_R = R^r eta_L + delta`` with a Gaussian code on
+    ``delta`` of width ``deviation_scale``. This nests the two constrained
+    models: ``deviation_scale = 0`` is exactly Model C, and large
+    ``deviation_scale`` approaches Model B's rate.
+
+    The shift ranges over nonidentity elements, matching Model C, so the
+    ``deviation_scale -> 0`` limit is that detector exactly rather than merely
+    asymptotically.
+    """
+    cL = np.asarray(counts_left, dtype=float)
+    cR = np.asarray(counts_right, dtype=float)
+    _, ll_null = fit_fundamental(cL + cR, m)
+
+    best = (-np.inf, None, None)
+    for s in range(1, m):
+        _, delta, ll = fit_approximate_orbit(cL, cR, m, s, deviation_scale)
+        if ll > best[0]:
+            best = (ll, s, delta)
+    ll_alt, best_shift, _ = best
+
+    dim = fundamental_dimension(m)
+    pen = label_cost(m) + deviation_penalty(dim, int(cR.sum()), deviation_scale)
+    gain = ll_alt - ll_null
+    # Asymptotically a fixed positive scale pays the full dimension; only at
+    # exactly zero does the continuous increment vanish.
+    increment = 0.0 if deviation_scale == 0 else float(dim)
+    return DetectorResult("approximate_orbit", gain, pen, gain - pen, increment, best_shift)

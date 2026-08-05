@@ -84,6 +84,45 @@ python -m regimeshift analyse --results results/v3/full_results.csv \
 
 reports every slope column in bits alongside a `k_star_multiple` column.
 
+## Model D: approximate orbits (Section 14.1)
+
+Exact symmetry is a strong assumption, and treating it as all-or-nothing hides
+the question that matters in practice: *how far from an exact orbit can a change
+drift before the relational code stops paying?* Model D answers it by
+interpolating between Models C and B,
+
+```
+eta_R = R^r eta_L + delta,     delta ~ N(0, tau^2 I)
+```
+
+with `tau = 0` pinning the deviation out — recovering Model C **exactly**, not
+just asymptotically — and large `tau` leaving it free, recovering Model B's
+maximised gain. The deviation costs `(d/2)·log(1 + n_R·tau²)` nats.
+
+Sweeping the true deviation at `m = 6`, effect 0.25, n = 1200 per side (mean MDL
+score, 250 trials, `tau = 0.05`):
+
+| deviation | A full | B fundamental | C exact orbit | D approx orbit | best |
+|---:|---:|---:|---:|---:|---|
+| 0.00 | 5.66 | 13.80 | **17.53** | 16.77 | C |
+| 0.25 | 13.49 | 21.72 | **24.47** | 24.29 | C |
+| 0.50 | 24.93 | 33.10 | 33.77 | **34.83** | D |
+| 1.00 | 53.52 | 62.13 | 61.31 | **63.22** | D |
+| 1.50 | 89.13 | **98.55** | 90.98 | 96.74 | B |
+| 3.00 | 226.66 | **241.78** | 171.69 | 211.68 | B |
+
+So the rigid orbit code holds its edge out to a deviation of roughly a quarter
+of the effect size; some relational code keeps winning out to about 1.5; past
+that the relation is not worth encoding. Model D occupies a genuine middle band
+rather than being a formality — around 0.5 to 1.0 it beats *both* endpoints,
+because C is too rigid to fit the drift and B pays full dimension for it.
+
+One honest caveat, stated in the code: for a **fixed** `tau > 0` the leading
+coefficient is `d/2` — Model B's rate, not something in between. The
+interpolation lives in the bounded term, i.e. at finite `n`, which is exactly
+where the tolerance question lives. A genuine interpolation of the *leading*
+coefficient would need `tau` shrinking with `n`.
+
 ## How to describe this work
 
 The defensible claim, and the wording two rounds of external methodological

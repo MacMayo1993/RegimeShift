@@ -15,6 +15,13 @@ Three scenarios exercise the three levels of geometric constraint:
     placing signal outside the fundamental component. A misspecification test
     for Models B and C.
 
+``approximate_orbit``
+    Section 14.1: ``eta_R = R eta_L + delta``, a one-step orbit plus a
+    controllable deviation *inside* the fundamental subspace. ``deviation = 0``
+    is the exact orbit; growing it sweeps continuously toward an independent
+    subspace change, which is how far a relational detector can be pushed
+    before its advantage disappears.
+
 The scenario constants below are the reproducible defaults of this
 implementation; see ``docs/paper-notes.md`` for which manuscript values were
 recoverable from the source document.
@@ -44,7 +51,7 @@ __all__ = [
     "build_segments",
 ]
 
-SCENARIOS = ("exact_orbit", "independent_fundamental", "higher_mode")
+SCENARIOS = ("exact_orbit", "independent_fundamental", "higher_mode", "approximate_orbit")
 
 #: Radius ratio of the right coordinate in the independent-fundamental scenario.
 INDEPENDENT_RADIUS_FACTOR = 0.72
@@ -127,6 +134,9 @@ class Segments:
     planted_shift: int | None
     """The true relative group element, or ``None`` when no exact orbit relation
     holds."""
+    deviation: float = 0.0
+    """Fisher-norm size of the departure from an exact orbit, as a multiple of
+    ``effect``. Nonzero only for the ``approximate_orbit`` scenario."""
 
     @property
     def p_null(self) -> np.ndarray:
@@ -142,14 +152,38 @@ def _base_theta(m: int, effect: float) -> np.ndarray:
     return theta
 
 
-def build_segments(m: int, scenario: str, effect: float) -> Segments:
-    """Construct the population distributions for one configuration."""
+def build_segments(m: int, scenario: str, effect: float, deviation: float = 0.0) -> Segments:
+    """Construct the population distributions for one configuration.
+
+    ``deviation`` applies only to ``approximate_orbit``, where it sets the size
+    of the departure from an exact orbit as a multiple of ``effect``.
+    """
     if scenario not in SCENARIOS:
         raise ValueError(f"unknown scenario {scenario!r}; expected one of {SCENARIOS}")
     if effect <= 0:
         raise ValueError("effect must be positive")
+    if deviation < 0:
+        raise ValueError("deviation must be non-negative")
+    if deviation and scenario != "approximate_orbit":
+        raise ValueError(f"deviation applies only to approximate_orbit, not {scenario!r}")
 
     theta_left = _base_theta(m, effect)
+
+    if scenario == "approximate_orbit":
+        # One-step orbit, displaced perpendicular to the rotated state so the
+        # deviation is a pure departure from the orbit rather than a rescaling.
+        rotated = rotation_matrix(m, 1) @ theta_left
+        if fundamental_dimension(m) == 1:
+            direction = np.array([1.0])
+        else:
+            unit = rotated / np.linalg.norm(rotated)
+            direction = np.array([-unit[1], unit[0]])
+        theta_right = rotated + deviation * effect * direction
+        p_left = probabilities(theta_left, m)
+        p_right = probabilities(theta_right, m)
+        planted = 1 if deviation == 0 else None
+        return Segments(m, scenario, effect, p_left, p_right,
+                        theta_left, theta_right, planted, deviation)
 
     if scenario == "exact_orbit":
         theta_right = rotation_matrix(m, 1) @ theta_left

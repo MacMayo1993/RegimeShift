@@ -221,6 +221,45 @@ prediction the manuscript makes but never checked: rho shifts only the bounded
 term `(d/2) log(rho (1 - rho))`, leaving the `log n` coefficient at `d/2`. Both
 the closed-form and Monte Carlo versions are asserted.
 
+## Model D: the approximate-orbit model (Section 14.1)
+
+Implemented beyond the manuscript's production comparison, because Section 14.1
+poses a question the three-model study cannot answer: how far from an exact
+orbit a change can drift before the relational code stops paying.
+
+The manuscript gives the form `eta_R = R_g^r eta_L + delta` "with a shrinkage
+prior or code on `delta`" but does not fix the code. This implementation takes
+a Gaussian prior `delta ~ N(0, tau^2 I)`; the Laplace approximation then gives
+a deviation cost of `(d/2) log(1 + n_R tau^2)`, since the Fisher-orthonormal
+coordinates make the right segment's information `n_R` per unit per direction.
+
+Two properties make the nesting exact rather than approximate:
+
+* `tau = 0` pins `delta` out and maximises over the same nonidentity shifts, so
+  Model D **is** Model C — same gain, same penalty, same selected shift, to
+  1e-9. Asserted directly.
+* Large `tau` leaves `delta` free, and the maximised gain matches Model B's to
+  1e-4, since the alternative can then reach any pair of coordinates.
+
+**The caveat that belongs with it.** For any *fixed* `tau > 0` the leading
+coefficient is `d/2` — Model B's rate, not an intermediate one. The
+interpolation lives entirely in the bounded term, i.e. at finite `n`. That is
+not a defect for the question being asked, since tolerance to imperfect symmetry
+is a finite-sample question, but a genuine interpolation of the *leading*
+coefficient would require `tau` shrinking with `n`, and this implementation does
+not do that.
+
+The `approximate_orbit` scenario supplies matching data, displacing the right
+state perpendicular to the rotated state so the deviation is a departure from
+the orbit rather than a rescaling along it. Sweeping it at `m = 6` shows three
+regimes: the rigid code wins out to a deviation of about 0.25 effects, Model D
+wins from roughly 0.5 to 1.0 by beating *both* endpoints, and beyond about 1.5
+the relation is not worth encoding at all. See the README table.
+
+Model D is deliberately **not** wired into `run_all_detectors` or the production
+grid, which reproduce the manuscript's three-model comparison. It is available
+through the API and covered by `tests/test_approximate_orbit.py`.
+
 ## Not implemented
 
 Scope limits carried over from Sections 11 and 13 of the manuscript:
