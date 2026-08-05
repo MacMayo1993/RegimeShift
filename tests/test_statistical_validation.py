@@ -408,18 +408,26 @@ def test_no_optimizer_failures_anywhere_in_the_grid(results):
 
 
 def test_penalty_slope_is_invariant_to_the_split_fraction():
-    """Section 4.2 predicts that rho moves only the bounded term. This is the
-    empirical check the manuscript never ran: the same configurations at a
-    balanced and a 1:3 split must give the same log-length coefficient."""
+    """Section 4.2 predicts that rho moves only the bounded term
+    ``(d/2) log(rho (1 - rho))``, leaving the ``log n`` coefficient at ``d/2``.
+    This is the empirical check the manuscript never ran.
+
+    Run on matched exact-orbit data. The property under test belongs to the
+    *penalty*, which does not depend on the scenario, so the scenario should be
+    chosen to make the slope estimable rather than to stress the detector: on
+    weak-signal misspecified data the estimate is noisy enough at an unbalanced
+    split -- where the left segment is only a quarter of the sample -- to
+    swamp the effect being measured.
+    """
     slopes = {}
     for rho in (0.5, 0.25):
         configs = build_grid(
-            groups=(4,), scenarios=("higher_mode",), effects=EFFECTS,
-            segment_lengths=(100, 200, 400, 800), n_alt=N_ALT, n_null=N_NULL,
+            groups=(4,), scenarios=("exact_orbit",), effects=EFFECTS,
+            segment_lengths=(100, 200, 400, 800, 1600), n_alt=N_ALT, n_null=N_NULL,
             split_fractions=(rho,),
         )
         frame = run_grid(configs, workers=4)
         slopes[rho] = score_regression(frame[frame["detector"] == "full"])["penalty_slope"]
-    assert abs(slopes[0.5] - slopes[0.25]) < 0.4
+    assert abs(slopes[0.5] - slopes[0.25]) < 0.3
     for slope in slopes.values():
-        assert slope == pytest.approx(predicted_slope("full", 4), abs=0.45)
+        assert slope == pytest.approx(predicted_slope("full", 4), abs=0.3)

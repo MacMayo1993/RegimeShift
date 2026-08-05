@@ -21,22 +21,42 @@ its own choices.
   Appendix A (cumulative-maximum stabilisation, then linear interpolation in
   log total length, with out-of-grid crossovers flagged and excluded).
 
-## Reconstructed, because the source rendered them as images
+## Constants taken from the manuscript
 
-The manuscript's displayed equations and several inline symbols are embedded
-images, so a handful of numeric constants could not be read out of the file.
-Where that happened this implementation makes an explicit, documented choice:
-
-| Quantity | Choice here | Basis |
+| Quantity | Value | Source |
 |---|---|---|
-| Model C label cost | `log(m - 1)` nats | Section 7.3 states the alternative ranges over nonidentity shifts and that `m = 2` has a single one; `log(m-1)` is the uniform code over that set and gives the stated zero cost at `m = 2`. |
-| Independent-fundamental radius ratio | `0.85` | Section 8.2 specifies "radius `rho` times the left radius"; the value was an image. Any ratio away from 1 with an angular offset breaks the orbit relation, which is what the scenario needs. |
-| Independent-fundamental angle | `0.713` rad | Stated in the text and readable. |
-| Independent-fundamental ratio at `m = 2` | `-0.6` | Section 8.2 gives a scalar ratio; the value was an image. The sign flip matters: `-1` would *be* the exact orbit. |
-| Higher-mode amplitude | `0.8 x` effect | Section 8.2 gives "amplitude `rho` times the effect"; value was an image. |
+| Model C label cost | `log(m - 1)` nats | §3.3: "Under a uniform two-part label code, its cost is log(g − 1) nats"; §7.3 confirms `log 1 = 0` at `g = 2`. |
+| Independent-fundamental radius ratio | `0.72` | §8.2 |
+| Independent-fundamental angle | `0.713` rad | §8.2 |
+| Independent-fundamental ratio at `m = 2` | `-0.55` | §8.2 |
+| Higher-mode amplitude | `0.85 x` effect | §8.2 |
 
-These constants live at the top of `regimeshift/scenarios.py` as named module
-constants so they can be changed in one place.
+All five are quoted directly from the document, and their provenance is also
+exported machine-readably as `regimeshift.MANUSCRIPT_CONSTANTS`. A test asserts
+every entry matches the live module constant, so the table cannot drift.
+
+### A correction worth recording
+
+Earlier versions of this file claimed the manuscript "renders its equations as
+images", and three of these constants were *guessed* on that basis — `0.85`,
+`-0.6` and `0.8` in place of the true `0.72`, `-0.55` and `0.85`.
+
+That premise was wrong. The document contains no equation images at all: its 400
+displayed and inline expressions are Office Math (OMML), and the five embedded
+PNGs are Figures 1–5. The first extraction pass read only `w:t` elements, which
+silently drops every `m:t` inside an `<m:oMath>` node — so the equations
+vanished from the extracted text and their absence was misread as evidence they
+were pictures.
+
+The lesson generalises beyond this repository: an extractor that drops content
+silently is worse than one that fails, because the gap gets rationalised. The
+extraction now includes math inline, and `docs/extracted-text.md` says which
+parts of the document it covers.
+
+The formulas recovered alongside the constants all confirm the implementation
+that had been written without them — the known-split penalty
+`(d/2)[log L1 + log L2 − log(L1+L2)]`, its `(d/2) log(ρ(1−ρ))` split-fraction
+term, and the `log(g − 1)` label cost.
 
 ## Deliberate deviations
 
@@ -45,14 +65,28 @@ constants so they can be changed in one place.
   the fundamental component, so it would not be a misspecification at all.
   The manuscript only reports this scenario for `m = 4, 5, 6`. Requesting it
   below `m = 4` raises rather than silently generating in-subspace data.
-* **At `m = 4` the higher-mode scenario is still an exact orbit in the full
-  simplex.** Mode 2 at `m = 4` is the sign representation, which flips under a
-  one-step shift, so the antisymmetric placement described in Section 8.2
-  leaves `p_right = g p_left`. The scenario remains a valid misspecification
-  test — neither constrained family can represent the mode-2 component — but the
-  population gains of Models B and C coincide there. `m = 5` and `m = 6` break
-  the orbit relation as well. This is pinned by
-  `test_higher_mode_at_m4_is_still_an_exact_orbit_in_the_full_space`.
+* **The higher-mode change is the mode-2 flip alone.** Section 8.2 says a
+  mode-2 component "was added with opposite signs on the two sides of the
+  boundary". This implementation initially read that as *rotate the fundamental
+  coordinate and also add the mode*, which left the change carrying a
+  full-strength exact-orbit component. Model C then retained 51–56% of the
+  population gain and stayed competitive under "misspecification", flatly
+  contradicting Table 7.
+
+  Confining the change to the higher mode — both segments share one fundamental
+  coordinate, which only sets the operating point away from uniform —
+  reproduces Table 7's structure:
+
+  | | full | fundamental | shared orbit |
+  |---|---|---|---|
+  | population gain, `m = 6`, effect 0.25 | 0.01005 | 0.00030 | **-0.00768** |
+  | share of full gain | 100% | 3.0% | negative |
+
+  The fundamental family keeps a few percent of the signal and the shared-orbit
+  gain goes *negative* — aligned pooling is worse than not aligning — which is
+  what produces Table 7's below-nominal shared-orbit power of 0.044–0.082. The
+  worked example shows the same reversal at calibrated 5%. Pinned by
+  `test_higher_mode_reproduces_the_manuscript_misspecification_pattern`.
 * **The full detector is BIC-scored**, matching Section 7.1's production rerun.
   The exact KT/Dirichlet mixture code is not implemented; Section 14.3 lists
   exact universal codes for all three families as future work.
@@ -90,6 +124,35 @@ look like bugs until you see why they are not:
    (`alt_A >= alt_B >= alt_C`, `null_A >= null_B = null_C`) and, because B and C
    share a null, `gain_B >= gain_C`. Both are asserted in
    `tests/test_detectors.py`.
+
+## K* = 1/(2 ln 2) as the penalty quantum
+
+Section 4.4 converts the regular penalty to bits: `(Δd/2) log2 L = Δd/(2 ln 2) ln L`,
+and Section 12 notes that `1/(2 ln 2)` also appears in an East-model inverse-gap
+asymptotic, calling the resemblance suggestive rather than explanatory.
+
+Naming that constant `K*` makes the paper's hierarchy a counting statement.
+Every leading coefficient in the framework is an integer multiple of it:
+
+| model | d | nats per ln n | bits per ln n |
+|---|---|---|---|
+| A. full | `m - 1` | `(m-1)/2` | `(m-1) K*` |
+| B. fundamental | `d_fund` | `d_fund/2` | `d_fund K*` |
+| C. shared orbit | 0 | 0 | **0** |
+
+So "Model C has no leading continuous-dimension penalty" becomes "Model C pays
+zero `K*` per e-fold". `regimeshift.K_STAR` exports the constant, `predicted_slope`
+takes a `units` argument, and the reports accept `--units bits`, which adds a
+`k_star_multiple` column.
+
+**A caution about Section 12.** `K*` arising as the per-dimension BIC rate in
+bits is *definitional*, not a discovery: it is Schwarz's one-half expressed in
+base 2, and any quantity counting half a parameter per e-fold in bits produces
+it. The East-model resemblance is therefore only meaningful if the dynamical
+occurrence is not likewise a units artefact — if `1/(2 ln 2)` enters there from
+the structure of the constrained generator rather than from a choice of base.
+That is a sharper form of the manuscript's own caveat, and it is the question a
+bridge between the levels would have to answer first.
 
 ## Analysis-integrity work beyond the manuscript
 

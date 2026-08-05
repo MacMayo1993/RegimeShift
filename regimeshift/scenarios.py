@@ -39,6 +39,7 @@ __all__ = [
     "INDEPENDENT_ANGLE_RAD",
     "INDEPENDENT_M2_FACTOR",
     "HIGHER_MODE_FACTOR",
+    "MANUSCRIPT_CONSTANTS",
     "Segments",
     "build_segments",
 ]
@@ -46,13 +47,70 @@ __all__ = [
 SCENARIOS = ("exact_orbit", "independent_fundamental", "higher_mode")
 
 #: Radius ratio of the right coordinate in the independent-fundamental scenario.
-INDEPENDENT_RADIUS_FACTOR = 0.85
+INDEPENDENT_RADIUS_FACTOR = 0.72
 #: Angular offset (radians) of the right coordinate, m >= 3.
 INDEPENDENT_ANGLE_RAD = 0.713
 #: Right/left coordinate ratio in the independent-fundamental scenario at m = 2.
-INDEPENDENT_M2_FACTOR = -0.6
+INDEPENDENT_M2_FACTOR = -0.55
 #: Amplitude of the higher mode, as a multiple of the effect size.
-HIGHER_MODE_FACTOR = 0.8
+HIGHER_MODE_FACTOR = 0.85
+
+#: Machine-readable provenance for each scenario constant taken from the source
+#: manuscript: value, manuscript section, and how it was obtained.
+#:
+#: All of these are now quoted directly from the document. An earlier version of
+#: this file guessed three of them, on the mistaken belief that the manuscript
+#: rendered its equations as images. It does not -- the equations are Office Math
+#: (OMML), and the first extraction pass simply dropped them by reading only
+#: ``w:t`` elements. See ``docs/paper-notes.md``.
+#:
+#: A test asserts each entry matches the live module constant, so the table
+#: cannot drift from the code.
+MANUSCRIPT_CONSTANTS = {
+    "INDEPENDENT_RADIUS_FACTOR": {
+        "value": INDEPENDENT_RADIUS_FACTOR,
+        "section": "8.2",
+        "recovered_from_manuscript": True,
+        "basis": (
+            "Section 8.2: 'the right coordinate had radius 0.72 times the left radius "
+            "and angle 0.713 radians'."
+        ),
+    },
+    "INDEPENDENT_ANGLE_RAD": {
+        "value": INDEPENDENT_ANGLE_RAD,
+        "section": "8.2",
+        "recovered_from_manuscript": True,
+        "basis": "Stated in readable body text.",
+    },
+    "INDEPENDENT_M2_FACTOR": {
+        "value": INDEPENDENT_M2_FACTOR,
+        "section": "8.2",
+        "recovered_from_manuscript": True,
+        "basis": (
+            "Section 8.2: 'For g = 2, the right coordinate was -0.55 times the left "
+            "coordinate.' The sign matters: -1 would BE the exact orbit."
+        ),
+    },
+    "HIGHER_MODE_FACTOR": {
+        "value": HIGHER_MODE_FACTOR,
+        "section": "8.2",
+        "recovered_from_manuscript": True,
+        "basis": (
+            "Section 8.2: 'a mode-2 Fourier component with amplitude 0.85 times the "
+            "effect was added with opposite signs on the two sides of the boundary'."
+        ),
+    },
+    "LABEL_COST": {
+        "value": "log(m - 1)",
+        "section": "3.3, 7.3",
+        "recovered_from_manuscript": True,
+        "basis": (
+            "Section 3.3: 'Under a uniform two-part label code, its cost is log(g - 1) "
+            "nats.' Section 7.3 confirms log 1 = 0 at g = 2. Still one legitimate "
+            "two-part code rather than a uniquely determined MDL constant."
+        ),
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -110,14 +168,26 @@ def build_segments(m: int, scenario: str, effect: float) -> Segments:
         p_right = probabilities(theta_right, m)
         return Segments(m, scenario, effect, p_left, p_right, theta_left, theta_right, None)
 
-    # higher_mode: exact-orbit base plus an antisymmetric mode-2 component.
+    # higher_mode: the mode-2 sign flip *is* the change. Both segments share the
+    # same fundamental coordinate, which only sets the operating point away from
+    # uniform; the two sides differ solely by an antisymmetric mode-2 component.
+    #
+    # Section 8.2 says a mode-2 component "was added with opposite signs on the
+    # two sides of the boundary". An earlier reading of this implementation also
+    # rotated the fundamental coordinate, so the change carried a full-strength
+    # exact-orbit component *plus* the higher mode -- which left Model C about
+    # half the population signal and kept it competitive, contradicting Table 7.
+    # With the change confined to the higher mode, the population gains
+    # reproduce Table 7's pattern: the fundamental family retains only a few
+    # percent of the full gain and the shared-orbit gain goes negative, matching
+    # the reported below-nominal shared-orbit power of 0.044-0.082.
     if m < 4:
         raise ValueError(
             "the higher_mode scenario needs m >= 4: at m = 2 mode 2 is trivial and at "
             "m = 3 mode 2 is the conjugate of mode 1, so it lies in the fundamental "
             "component and is not a misspecification"
         )
-    theta_right = rotation_matrix(m, 1) @ theta_left
+    theta_right = theta_left
     extra = higher_mode_logits(m, HIGHER_MODE_FACTOR * effect, mode=2)
     p_left = probabilities(theta_left, m, extra_logits=extra)
     p_right = probabilities(theta_right, m, extra_logits=-extra)

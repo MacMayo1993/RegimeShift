@@ -1,10 +1,12 @@
 # Manuscript text (extracted)
 
-Plain-text extraction of `Geometric_Complexity_Cyclic_Regime_Changes_v3_1.docx`,
-for grepping and for reviewing diffs. **The .docx is the source of truth.**
-Displayed equations, several inline symbols, and the five figures are images in
-the original and therefore do not appear below; `paper-notes.md` records the
-constants that had to be reconstructed as a result.
+Text extraction of `Geometric_Complexity_Cyclic_Regime_Changes_v3_1.docx`, for
+grepping and for reviewing diffs. **The .docx is the source of truth.**
+
+Equations are Office Math (OMML), not images, and are included here inline in
+backticks. OMML carries no spacing or delimiters, so a rendered expression like
+"log(g - 1)" appears as `logg-1`; read them as symbol sequences, not as
+typeset formulas. The five figures are images and do not appear.
 
 ---
 
@@ -20,9 +22,9 @@ Abstract
 
 A categorical regime change can be modeled at several levels of structural constraint. An unrestricted detector allows each segment to occupy the full parameter space. A representation-constrained detector restricts each segment independently to a selected invariant subspace. A shared-orbit detector imposes the stronger requirement that both segment distributions arise from one continuous state and differ only by a finite group action. These are different statistical hypotheses and have different minimum-description-length (MDL) complexity increments.
 
-For a known boundary and a regular full model of dimension , independently fitting both segments introduces the leading penalty . Restricting both segments independently to a -dimensional fundamental representation gives . If the segments share the same continuous orbit parameter and differ only by a relative element of a fixed cyclic group , the continuous-dimension increment is zero; a two-part code pays only the discrete relative-label cost , subject to finite-sample and singular corrections near orbit-collapse points.
+For a known boundary and a regular full model of dimension `dfull`, independently fitting both segments introduces the leading penalty `dfull2logL`. Restricting both segments independently to a `dfund`-dimensional fundamental representation gives `dfund2logL`. If the segments share the same continuous orbit parameter and differ only by a relative element of a fixed cyclic group `Cg`, the continuous-dimension increment is zero; a two-part code pays only the discrete relative-label cost `logg−1`, subject to finite-sample and singular corrections near orbit-collapse points.
 
-We derive these three laws, construct a Fisher-orthonormal Fourier family for direct cyclic categorical models, implement all three detectors, and evaluate them in a 468,000-dataset Monte Carlo study over  through . The empirical full-model penalty slopes were 1.515, 2.119, and 2.468 for , compared with predictions 1.5, 2.0, and 2.5. Fundamental-subspace slopes were 0.457 for  and 0.967–1.047 for  through , compared with predictions 0.5 and 1.0. Shared-orbit score regressions retained small residual slopes, while direct crossover regressions for  and  were 0.037 and 0.062, supporting a near-zero leading logarithmic coefficient rather than establishing exact finite-sample constancy. Under a common 5% null calibration, the shared-orbit detector required approximately 30%, 33%, and 39% fewer observations than the full detector on exact-orbit data for . Under higher-mode misspecification, the full detector retained high power while the constrained detectors did not. The results confirm that full-space change, invariant-subspace change, and exact-orbit transition are statistically distinct regimes of geometric constraint.
+We derive these three laws, construct a Fisher-orthonormal Fourier family for direct cyclic categorical models, implement all three detectors, and evaluate them in a 468,000-dataset Monte Carlo study over `C2` through `C6`. The empirical full-model penalty slopes were 1.515, 2.119, and 2.468 for `C4,C5,C6`, compared with predictions 1.5, 2.0, and 2.5. Fundamental-subspace slopes were 0.457 for `C2` and 0.967–1.047 for `C3` through `C6`, compared with predictions 0.5 and 1.0. Shared-orbit score regressions retained small residual slopes, while direct crossover regressions for `C5` and `C6` were 0.037 and 0.062, supporting a near-zero leading logarithmic coefficient rather than establishing exact finite-sample constancy. Under a common 5% null calibration, the shared-orbit detector required approximately 30%, 33%, and 39% fewer observations than the full detector on exact-orbit data for `C4,C5,C6`. Under higher-mode misspecification, the full detector retained high power while the constrained detectors did not. The results confirm that full-space change, invariant-subspace change, and exact-orbit transition are statistically distinct regimes of geometric constraint.
 
 Keywords: minimum description length; cyclic groups; changepoint models; representation theory; information geometry; categorical data; model selection; symmetry.
 
@@ -44,6 +46,7 @@ Shared exact-orbit model. The segments share one continuous parameter vector and
 
 The models have continuous-dimension increments
 
+`ΔdA=dfull,  ΔdB=dfund,  ΔdC=0.`
 
 The distinction is not semantic. It determines the leading MDL penalty and the sample length required for reliable detection. Earlier formulations of the present project conflated Models B and C: the prose described a shared orbit, while the proposed penalty corresponded to independently fitted subspace coordinates. The corrected framework treats the hypotheses separately and makes their different complexity laws the subject of the analysis.
 
@@ -61,42 +64,51 @@ The analysis is explicitly an offline known-boundary model comparison. It is not
 
 Let
 
+`X1,…,XL`
 
-be independent categorical observations with a proposed boundary after  observations, where
+be independent categorical observations with a proposed boundary after `L1` observations, where
 
+`L1+L2=L,  L1L→ρ∈0,1.`
 
-The left and right segments are denoted  and . The boundary is supplied to the detector. No search over candidate locations is performed in the principal analysis.
+The left and right segments are denoted `XL` and `XR`. The boundary is supplied to the detector. No search over candidate locations is performed in the principal analysis.
 
-For model class , write  for the one-regime null and  for the two-regime alternative. The detector score is
+For model class `M∈{A,B,C}`, write `H0,M` for the one-regime null and `H1,M` for the two-regime alternative. The detector score is
 
+`SM=ℓ1,Mθ1−ℓ0,Mθ0−penML1,L2,`
 
-where  and  are maximized log likelihoods in nats. The raw MDL rule declares a change when .
+where `ℓ0,M` and `ℓ1,M` are maximized log likelihoods in nats. The raw MDL rule declares a change when `SM>0`.
 
 2.2 Full parameter family
 
 Let
 
+`P={pθ:θ∈Θ}`
 
 be a regular parametric family of continuous dimension
 
+`dfull=dimΘ.`
 
-For an -category multinomial model,
+For an `m`-category multinomial model,
 
+`P=Δm−1,  dfull=m−1.`
 
-The notation  is retained because applications with several categorical blocks can have dimensions larger than .
+The notation `dfull` is retained because applications with several categorical blocks can have dimensions larger than `m−1`.
 
 2.3 Cyclic group action
 
 Let
 
+`Cg={e,τ,τ2,…,τg−1}`
 
-act on the family through transformations . In the direct categorical model used for the simulations, the alphabet size equals the group order and  cyclically permutes the category coordinates. In block models, the group may instead permute phase blocks while leaving the within-block alphabet unchanged.
+act on the family through transformations `Tk:P→P`. In the direct categorical model used for the simulations, the alphabet size equals the group order and `Tk` cyclically permutes the category coordinates. In block models, the group may instead permute phase blocks while leaving the within-block alphabet unchanged.
 
-At a symmetric reference distribution , the tangent space carries an induced real representation of . Let
+At a symmetric reference distribution `p0`, the tangent space carries an induced real representation of `Cg`. Let
 
+`Vfund⊆Tp0P`
 
-be the selected fundamental invariant component, with real dimension . For a direct cyclic categorical model,
+be the selected fundamental invariant component, with real dimension `dfund`. For a direct cyclic categorical model,
 
+`dfund=1,g=2,2,g≥3.`
 
 3. Three model classes
 
@@ -104,33 +116,41 @@ be the selected fundamental invariant component, with real dimension . For a dir
 
 Under the null, both segments share one unrestricted parameter:
 
+`H0,A: XL,XR∼pθ.`
 
 Under the alternative,
 
+`H1,A: XL∼pθL,  XR∼pθR,`
 
-where  and  are independently fitted. Hence
+where `θL` and `θR` are independently fitted. Hence
 
+`d0,A=dfull,  d1,A=2dfull,`
 
 and
 
+`ΔdA=dfull.`
 
-For a direct -category model, .
+For a direct `g`-category model, `dfull=g−1`.
 
 3.2 Model B: independent fundamental-subspace change
 
-Let  parameterize a smooth exponential-family chart inside the selected invariant subspace. A convenient form is
+Let `η∈Rdfund` parameterize a smooth exponential-family chart inside the selected invariant subspace. A convenient form is
 
+`qηj=exp{Zηj}r​exp{Zηr},`
 
-where the columns of  span the fundamental component in logit coordinates.
+where the columns of `Z` span the fundamental component in logit coordinates.
 
 Under the null,
 
+`H0,B: XL,XR∼qη.`
 
 Under the alternative,
 
+`H1,B: XL∼qηL,  XR∼qηR,`
 
-where  and  are independent. Therefore,
+where `ηL` and `ηR` are independent. Therefore,
 
+`ΔdB=dfund.`
 
 Model B states that both regimes lie in the same invariant subspace. It does not require the right regime to be a group transform of the left.
 
@@ -138,20 +158,25 @@ Model B states that both regimes lie in the same invariant subspace. It does not
 
 Let
 
+`qkη=Tkq0η.`
 
 A simultaneous shift of both labels is observationally redundant, so the left label can be fixed as a gauge. Under the null,
 
+`H0,C: XL,XR∼q0η.`
 
 Under the alternative,
 
+`H1,C: XL∼q0η,  XR∼qrη,`
 
 where the relative shift satisfies
 
+`r∈{1,…,g−1}.`
 
-The same continuous vector  appears on both sides. Therefore,
+The same continuous vector `η` appears on both sides. Therefore,
 
+`ΔdC=0.`
 
-The alternative introduces only the discrete relative shift. Under a uniform two-part label code, its cost is  nats. For fixed , this is constant in .
+The alternative introduces only the discrete relative shift. Under a uniform two-part label code, its cost is `logg−1` nats. For fixed `g`, this is constant in `L`.
 
 Table 1. Three levels of geometric constraint for a known boundary.
 
@@ -159,6 +184,7 @@ Model
 
 Alternative relation between segments
 
+`Δd`
 
 Leading incremental penalty
 
@@ -166,53 +192,67 @@ A. Full independent
 
 Arbitrary separate parameters
 
+`dfull`
 
+`dfull2logL+O1`
 
 B. Independent fundamental
 
-Separate parameters in
+Separate parameters in `Vfund`
 
+`dfund`
 
+`dfund2logL+O1`
 
 C. Shared exact orbit
 
-One shared state plus relative
+One shared state plus relative `r∈Cg`
 
+`0`
 
+`logg−1+O1`
 
 4. MDL complexity laws
 
 4.1 Regular codelength expansion
 
-For a regular -dimensional family fitted to  observations, BIC, regular Laplace marginal likelihood, and standard parametric-complexity expansions share the leading form [1–5]
+For a regular `d`-dimensional family fitted to `N` observations, BIC, regular Laplace marginal likelihood, and standard parametric-complexity expansions share the leading form [1–5]
 
+`−logpxN=−ℓNθ+d2logN+O1.`
 
-The  term depends on the coding convention, prior, Fisher information, and parameter-space geometry.
+The `O1` term depends on the coding convention, prior, Fisher information, and parameter-space geometry.
 
 4.2 Exact split increment
 
-For a known split, the incremental regular complexity produced by replacing one -dimensional fit with two is
+For a known split, the incremental regular complexity produced by replacing one `d`-dimensional fit with two is
 
+`pensplitd;L1,L2=d2logL1+logL2−logL1+L2.`
 
-When ,
+When `L1/L→ρ`,
 
+`pensplit=d2logL+d2log{ρ1−ρ}+O1.`
 
-Thus the coefficient of  is , while the split fraction affects only the bounded term.
+Thus the coefficient of `logL` is `d/2`, while the split fraction affects only the bounded term.
 
 For the three models,
 
+`penA=dfull2logL+O1,`
 
+`penB=dfund2logL+O1,`
 
 and
 
+`penC=logg−1+O1.`
 
 4.3 Unknown boundaries
 
-If the boundary is unknown, a detector must encode or search over approximately  candidate locations. A simple two-part location code adds
+If the boundary is unknown, a detector must encode or search over approximately `L−1` candidate locations. A simple two-part location code adds
 
+`logL−1=logL+O1`
 
 to every model. The corresponding leading coefficients become
 
+`dfull2+1,  dfund2+1,  1.`
 
 A location cost cannot be applied to only one detector in a known-boundary comparison. Doing so confounds changepoint multiplicity with model dimension.
 
@@ -220,38 +260,47 @@ A location cost cannot be applied to only one detector in a known-boundary compa
 
 In bits, a regular penalty is
 
+`Δd2log2L=Δd2ln2lnL.`
 
-The quantity  is therefore a coefficient multiplying  after conversion to bits. It is not a fixed rate in bits per observation. The per-observation penalty,
+The quantity `Δd/2ln2` is therefore a coefficient multiplying `lnL` after conversion to bits. It is not a fixed rate in bits per observation. The per-observation penalty,
 
+`Δd2Llog2L,`
 
-vanishes as .
+vanishes as `L→∞`.
 
 5. Cyclic Fourier geometry
 
 5.1 Fisher metric at the uniform distribution
 
-For the direct -category model, let
+For the direct `g`-category model, let
 
+`p0=1g,…,1g.`
 
 The tangent space is
 
+`Tp0Δg−1=v∈Rg:j=0g−1vj=0.`
 
-At , the Fisher inner product is
+At `p0`, the Fisher inner product is
 
+`⟨u,v⟩F=j​ujvjp0,j=g uTv.`
 
 5.2 Fundamental Fourier basis
 
-For , define
+For `g≥3`, define
 
+`cj=2gcos2πjg,  sj=2gsin2πjg.`
 
 Then
 
+`⟨c,c⟩F=⟨s,s⟩F=1,  ⟨c,s⟩F=0.`
 
-Their span is invariant under cyclic permutation. In coefficient space, a one-step cyclic shift acts as a planar rotation by . For , the Fisher-unit basis is
+Their span is invariant under cyclic permutation. In coefficient space, a one-step cyclic shift acts as a planar rotation by `2π/g`. For `g=2`, the Fisher-unit basis is
 
+`c=121,−1.`
 
 The implementation uses Cartesian coordinates rather than amplitude-angle coordinates:
 
+`vη=ac+bs,  η=a,b.`
 
 This avoids the unidentifiable angular coordinate at zero amplitude.
 
@@ -259,21 +308,25 @@ This avoids the unidentifiable angular coordinate at zero amplitude.
 
 The direct fundamental family is defined through softmax logits:
 
+`qηj=exp{Zηj}r​exp{Zηr},`
 
-where  for  and  for . The scaling makes the derivative at the uniform distribution equal to the Fisher-orthonormal tangent basis. If  is the fundamental rotation matrix, the family satisfies the equivariance identity
+where `Z=gc s` for `g≥3` and `Z=gc` for `g=2`. The scaling makes the derivative at the uniform distribution equal to the Fisher-orthonormal tangent basis. If `Rg` is the fundamental rotation matrix, the family satisfies the equivariance identity
 
+`qRgkη=Tkqη.`
 
-The automated tests verified Fisher orthonormality and numerical equivariance through .
+The automated tests verified Fisher orthonormality and numerical equivariance through `C10`.
 
 5.4 Local Jensen–Shannon geometry
 
-For small perturbations  and ,
+For small perturbations `p=p0+v` and `q=p0+Rv`,
 
+`JSDp,q=18∥v−Rv∥F2+O∥v∥F4.`
 
-If  is the fundamental cyclic rotation and ,
+If `R` is the fundamental cyclic rotation and `∥v∥F=ε`,
 
+`JSDp,q=ε241−cos2πg+Oε4.`
 
-Therefore the leading coefficients are , , and  for , respectively. No extra factor of  appears when  is measured in Fisher norm.
+Therefore the leading coefficients are `1/2`, `3/8`, and `1/4` for `g=2,3,4`, respectively. No extra factor of `g` appears when `ε` is measured in Fisher norm.
 
 6. Population gains and detection boundaries
 
@@ -281,12 +334,15 @@ Therefore the leading coefficients are , , and  for , respectively. No extra fac
 
 The relevant signal strength is the expected log-likelihood advantage within the model being fitted. Define
 
+`GM=maxθ∈H1,MElogpθX−maxθ∈H0,MElogpθX.`
 
 The expected score has the form
 
+`ESM≈LGM−penML.`
 
 For the full multinomial model with equal segment sizes, the pooled null is the arithmetic mixture and
 
+`GA=JSDpL,pR.`
 
 For a restricted family, the pooled null is generally a KL projection rather than the arithmetic mixture. Consequently, ordinary JSD should not be used automatically for Models B and C. The implementation computes each population gain by optimizing the corresponding population log likelihood.
 
@@ -294,46 +350,53 @@ For a restricted family, the pooled null is generally a KL projection rather tha
 
 If
 
+`GM=aMε2+oε2,`
 
 then the regular models have boundaries
 
+`εA2≍dfulllogL2aAL,`
 
 and
 
+`εB2≍dfundlogL2aBL.`
 
-For a regular shared-orbit stratum with fixed  and an explicit label code,
+For a regular shared-orbit stratum with fixed `g` and an explicit label code,
 
+`εC2≍logg−1+O1aCL.`
 
-The stronger  scaling of Model C arises not merely from a smaller tangent space, but from sharing the continuous state across the boundary.
+The stronger `1/L` scaling of Model C arises not merely from a smaller tangent space, but from sharing the continuous state across the boundary.
 
 6.3 Singular qualification
 
-At , all orbit elements coincide. The relative label is then unidentifiable, and the shared-orbit model is singular. The two-part code still adds no independent continuous parameter vector, but exact Bayesian asymptotics near orbit collapse may contain nonregular corrections [6]. The empirical study therefore treats a zero leading coefficient as a theoretical structural prediction, while allowing finite-sample residual length dependence.
+At `η=0`, all orbit elements coincide. The relative label is then unidentifiable, and the shared-orbit model is singular. The two-part code still adds no independent continuous parameter vector, but exact Bayesian asymptotics near orbit collapse may contain nonregular corrections [6]. The empirical study therefore treats a zero leading coefficient as a theoretical structural prediction, while allowing finite-sample residual length dependence.
 
 7. Detector implementation
 
 7.1 Full detector
 
-The production rerun used a BIC-scored unrestricted multinomial detector so that all three detectors could be compared through maximized likelihood plus explicit complexity increments. For count vectors  and , the raw gain is
+The production rerun used a BIC-scored unrestricted multinomial detector so that all three detectors could be compared through maximized likelihood plus explicit complexity increments. For count vectors `cL` and `cR`, the raw gain is
 
+`ℓpL;cL+ℓpR;cR−ℓp;cL+cR.`
 
 The penalty is the exact known-split increment
 
+`g−12logL1+logL2−logL.`
 
-An exact KT/Dirichlet- implementation is also available in the accompanying code, but it was not used for the reported production slopes.
+An exact KT/Dirichlet-`1/2` implementation is also available in the accompanying code, but it was not used for the reported production slopes.
 
 7.2 Fundamental detector
 
-The null fits one coordinate vector  to the combined counts. The alternative fits  and  separately. Optimization uses L-BFGS-B with analytical gradients in Cartesian Fourier coordinates and a smooth softmax map. The penalty is the exact known-split BIC increment with dimension .
+The null fits one coordinate vector `η` to the combined counts. The alternative fits `ηL` and `ηR` separately. Optimization uses L-BFGS-B with analytical gradients in Cartesian Fourier coordinates and a smooth softmax map. The penalty is the exact known-split BIC increment with dimension `dfund`.
 
 7.3 Shared-orbit detector
 
-The null fits one  to the combined counts. For each nonidentity shift , the right counts are aligned by , pooled with the left counts, and fitted with one shared . The alternative chooses the shift with the largest shared-state likelihood. Its penalty is
+The null fits one `η` to the combined counts. For each nonidentity shift `r`, the right counts are aligned by `−r`, pooled with the left counts, and fitted with one shared `η`. The alternative chooses the shift with the largest shared-state likelihood. Its penalty is
 
+`logg−1,`
 
 with no location cost and no continuous-dimension increment.
 
-For , there is only one nonidentity shift and the label cost is .
+For `g=2`, there is only one nonidentity shift and the label cost is `log1=0`.
 
 7.4 Structural validation
 
@@ -345,7 +408,7 @@ exact cyclic equivariance;
 
 the intended continuous-dimension increments;
 
-equality of Models A and B for  and , where the fundamental component spans the full nontrivial tangent space;
+equality of Models A and B for `C2` and `C3`, where the fundamental component spans the full nontrivial tangent space;
 
 recovery of planted relative shifts in smoke data;
 
@@ -367,6 +430,7 @@ Values
 
 Cyclic groups
 
+`C2,C3,C4,C5,C6`
 
 Effect coordinates
 
@@ -376,7 +440,7 @@ Segment length per side
 
 100, 200, 400, 800, 1,600, 3,200
 
-Total length
+Total length `L`
 
 200 through 6,400
 
@@ -390,6 +454,7 @@ Null calibration trials
 
 Calibration target
 
+`α=0.05`
 
 Full detector
 
@@ -423,11 +488,11 @@ The left state was generated from a fundamental coordinate with norm equal to th
 
 Independent fundamental change
 
-Both regimes were generated inside the fundamental family but were not generally related by a cyclic shift. For , the right coordinate had radius  times the left radius and angle 0.713 radians. For , the right coordinate was  times the left coordinate. This scenario matches Model B but generally violates Model C.
+Both regimes were generated inside the fundamental family but were not generally related by a cyclic shift. For `g≥3`, the right coordinate had radius `0.72` times the left radius and angle 0.713 radians. For `g=2`, the right coordinate was `−0.55` times the left coordinate. This scenario matches Model B but generally violates Model C.
 
 Full-space higher-mode change
 
-For , a mode-2 Fourier component with amplitude  times the effect was added with opposite signs on the two sides of the boundary. For , this is the one-dimensional sign representation. For , it is a higher two-dimensional Fourier mode. This scenario contains signal outside the fundamental component and is used as a misspecification test.
+For `g≥4`, a mode-2 Fourier component with amplitude `0.85` times the effect was added with opposite signs on the two sides of the boundary. For `g=4`, this is the one-dimensional sign representation. For `g=5,6`, it is a higher two-dimensional Fourier mode. This scenario contains signal outside the fundamental component and is used as a misspecification test.
 
 8.3 Two distinct analyses
 
@@ -437,9 +502,11 @@ Raw MDL score analysis
 
 For each matched detector and scenario, the mean uncalibrated score was regressed as
 
+`S=β0+βGLGM+βLlogL+effect fixed effects+ϵ.`
 
-The expected coefficient is . The empirical penalty slope is defined as
+The expected coefficient is `βG=1`. The empirical penalty slope is defined as
 
+`cM=−βL.`
 
 Each group-level regression used 24 design points: four effects by six lengths.
 
@@ -453,17 +520,19 @@ For each effect, the 50% power crossover was estimated by monotone stabilization
 
 9.1 Full-model penalty
 
-For the full-space matched scenario, the observed coefficients were close to the theoretical values .
+For the full-space matched scenario, the observed coefficients were close to the theoretical values `g−1/2`.
 
 Table 3. Raw-score regression estimates for the full model.
 
+`g`
 
- (SE)
+`βG` (SE)
 
 Empirical penalty slope (SE)
 
 Predicted slope
 
+`R2`
 
 4
 
@@ -495,24 +564,26 @@ Predicted slope
 
 0.9999
 
-The gain coefficients were within approximately 1.2% of one. The observed penalty slopes followed the predicted increase with group order. The  estimate exceeded 2.0 by about 0.119, a finite-sample deviation of roughly two standard errors; the overall pattern nevertheless tracks the full dimension rather than a constant fundamental dimension.
+The gain coefficients were within approximately 1.2% of one. The observed penalty slopes followed the predicted increase with group order. The `C5` estimate exceeded 2.0 by about 0.119, a finite-sample deviation of roughly two standard errors; the overall pattern nevertheless tracks the full dimension rather than a constant fundamental dimension.
 
 
 Figure 1. Predicted and observed full-model coefficients. Error bars show one regression standard error.
 
 9.2 Fundamental-subspace penalty
 
-Model B predicts a coefficient of  for  and 1 for every  with .
+Model B predicts a coefficient of `1/2` for `C2` and 1 for every `Cg` with `g≥3`.
 
 Table 4. Raw-score regression estimates for the fundamental-subspace model.
 
+`g`
 
- (SE)
+`βG` (SE)
 
 Empirical penalty slope (SE)
 
 Predicted slope
 
+`R2`
 
 2
 
@@ -564,12 +635,13 @@ Predicted slope
 
 0.9995
 
-The empirical coefficients remain approximately constant from  through , even though the full-simplex dimension increases from two to five. This is the clearest direct evidence that an independently fitted fundamental family has a different complexity law from the unrestricted multinomial family.
+The empirical coefficients remain approximately constant from `C3` through `C6`, even though the full-simplex dimension increases from two to five. This is the clearest direct evidence that an independently fitted fundamental family has a different complexity law from the unrestricted multinomial family.
 
-For  and , the full and fundamental model spaces coincide because
+For `C2` and `C3`, the full and fundamental model spaces coincide because
 
+`g−1=dfund.`
 
-The informative separation begins at .
+The informative separation begins at `C4`.
 
 
 Figure 2. Predicted and observed fundamental-subspace coefficients. Error bars show one regression standard error.
@@ -580,13 +652,15 @@ Model C predicts no leading continuous-dimension term. The raw-score regressions
 
 Table 5. Residual raw-score log-length slopes for the shared-orbit model.
 
+`g`
 
- (SE)
+`βG` (SE)
 
 Residual penalty slope (SE)
 
 Structural prediction
 
+`R2`
 
 2
 
@@ -638,7 +712,7 @@ Structural prediction
 
 0.9998
 
-These residual slopes are far below the fundamental and full coefficients, but they are not uniformly zero. Direct raw-threshold crossover regressions, available where at least three effects crossed 50% power inside the grid, gave slopes 0.037 for  and 0.062 for . Their  values were modest because only three or four crossover points were available.
+These residual slopes are far below the fundamental and full coefficients, but they are not uniformly zero. Direct raw-threshold crossover regressions, available where at least three effects crossed 50% power inside the grid, gave slopes 0.037 for `C5` and 0.062 for `C6`. Their `R2` values were modest because only three or four crossover points were available.
 
 The evidence therefore supports the qualified statement:
 
@@ -655,6 +729,7 @@ The common 5% calibration permits direct comparison of sample length at equal no
 
 Table 6. Median calibrated crossover-length ratios.
 
+`g`
 
 Shared / full
 
@@ -702,9 +777,9 @@ Fundamental / full
 
 0.793
 
-For exact-orbit data, the shared detector required approximately 30%, 33%, and 39% fewer observations than the full detector for . Relative to the fundamental detector, the reduction was approximately 17%–19% over the same groups.
+For exact-orbit data, the shared detector required approximately 30%, 33%, and 39% fewer observations than the full detector for `C4,C5,C6`. Relative to the fundamental detector, the reduction was approximately 17%–19% over the same groups.
 
-For independent fundamental changes, Model B and Model A were identical at  and . At , the fundamental detector required approximately 10%, 23%, and 21% fewer observations than the full detector among effects with internal crossover estimates.
+For independent fundamental changes, Model B and Model A were identical at `C2` and `C3`. At `C4,C5,C6`, the fundamental detector required approximately 10%, 23%, and 21% fewer observations than the full detector among effects with internal crossover estimates.
 
 
 Figure 4. Calibrated sample-length advantage on exact-orbit data. The dashed line denotes equal sample requirements.
@@ -715,6 +790,7 @@ The constrained detectors should not dominate when their geometric assumptions a
 
 Table 7. Mean calibrated power for higher-mode full-space changes at total length 6,400.
 
+`g`
 
 Full
 
@@ -757,6 +833,7 @@ On exact-orbit data at total length 6,400, the shared detector also recovered th
 
 Table 8. Relative-shift recovery at total length 6,400.
 
+`g`
 
 Mean accuracy
 
@@ -804,7 +881,7 @@ Maximum across effects
 
 1.000
 
-The slight decline with  is expected because the detector maximizes over more candidate shifts, while adjacent orbit states become geometrically closer for some directions as group order increases.
+The slight decline with `g` is expected because the detector maximizes over more candidate shifts, while adjacent orbit states become geometrically closer for some directions as group order increases.
 
 10. Interpretation
 
@@ -814,8 +891,9 @@ The central empirical result is not a single universal cyclic threshold. It is t
 
 The full detector follows the growing simplex dimension. The fundamental detector follows the fixed dimension of the selected representation. The shared-orbit detector is qualitatively different because the alternative does not introduce a second continuous state.
 
-For ,
+For `g≥4`,
 
+`g−12>dfund2=1>0.`
 
 The Monte Carlo slopes display the same ordering.
 
@@ -827,12 +905,13 @@ Model C gains efficiency through parameter sharing. Its hypothesis is relational
 
 The distinction suggests a hierarchy of prior structural knowledge:
 
+`arbitrary change⊃subspace change⊃exact orbit transition.`
 
 Greater structural commitment reduces codelength only when the data support that commitment.
 
 10.3 Why the shared result is qualified
 
-The structural dimension increment of Model C is exactly zero, but a zero dimension increment does not imply that every finite-sample score statistic is independent of . The selected shift is unidentifiable at orbit collapse, the maximum is taken over several discrete alternatives, and likelihood estimators carry finite-sample bias. The observed residual coefficients should therefore be treated as empirical corrections rather than reinterpreted as a two-dimensional regular penalty.
+The structural dimension increment of Model C is exactly zero, but a zero dimension increment does not imply that every finite-sample score statistic is independent of `L`. The selected shift is unidentifiable at orbit collapse, the maximum is taken over several discrete alternatives, and likelihood estimators carry finite-sample bias. The observed residual coefficients should therefore be treated as empirical corrections rather than reinterpreted as a two-dimensional regular penalty.
 
 A future exact marginal-likelihood analysis should determine whether these corrections approach a constant, a smaller logarithmic term arising from singular learning, or another slowly varying form in local alternatives.
 
@@ -842,37 +921,47 @@ A future exact marginal-likelihood analysis should determine whether these corre
 
 A codon-phase model has
 
+`g=3`
 
 reading-frame phases and
 
+`m=4`
 
 nucleotide symbols. These quantities are not interchangeable.
 
 A phase-specific nucleotide model contains
 
+`p0,p1,p2∈Δ3,`
 
 so the full parameter space is
 
+`Δ33`
 
 with dimension
 
+`dfull=34−1=9.`
 
-The group  acts by permuting the three phase blocks.
+The group `C3` acts by permuting the three phase blocks.
 
 11.2 Fundamental isotypic dimension
 
 The phase representation decomposes as
 
+`Rphase3=Vtriv⊕Vfund,`
 
-where . Each phase coordinate carries a three-dimensional nucleotide-contrast tangent space. The nontrivial phase isotypic component therefore has dimension
+where `dimVfund=2`. Each phase coordinate carries a three-dimensional nucleotide-contrast tangent space. The nontrivial phase isotypic component therefore has dimension
 
+`dphase-fund=2m−1=6.`
 
 The corresponding known-boundary penalties are
 
+`penfull=92logL+O1,`
 
+`penphase-fund=3logL+O1,`
 
 and, for a shared exact phase orbit,
 
+`penorbit=log2+O1.`
 
 A two-dimensional codon-phase model would require an additional biological restriction, such as a single fixed nucleotide-contrast direction shared across phases.
 
@@ -882,7 +971,7 @@ A corrected frameshift experiment would:
 
 estimate phase-specific nucleotide or codon-emission parameters from verified coding sequences;
 
-generate or curate sequences containing known  and  frameshifts;
+generate or curate sequences containing known `+1` and `−1` frameshifts;
 
 compare full, phase-fundamental, and shared-phase-orbit detectors at known boundaries;
 
@@ -904,7 +993,7 @@ Information. A statistical observer faces model-dependent description lengths de
 
 The present paper establishes a result only at the third level. It does not prove that topological holonomy, dynamical spectral gaps, and MDL coefficients are numerically identical.
 
-A motivating numerical coincidence remains: the East model contains an inverse-gap asymptotic involving , while a one-dimensional regular BIC increment has coefficient  when expressed in bits per . This resemblance is suggestive but not explanatory. A genuine bridge would need to derive the observer’s statistical family from the dynamics and identify the operating regime in which relaxation and detection asymptotics are comparable.
+A motivating numerical coincidence remains: the East model contains an inverse-gap asymptotic involving `1/2ln2`, while a one-dimensional regular BIC increment has coefficient `1/2ln2` when expressed in bits per `lnL`. This resemblance is suggestive but not explanatory. A genuine bridge would need to derive the observer’s statistical family from the dynamics and identify the operating regime in which relaxation and detection asymptotics are comparable.
 
 13. Limitations
 
@@ -930,13 +1019,15 @@ Finally, the novelty claim should be kept narrow. Symmetry reduction, MDL dimens
 
 A natural interpolation between Models B and C is
 
+`ηR=RgrηL+δ,`
 
-with a shrinkage prior or code on . Setting  gives the exact orbit; allowing unrestricted  recovers the independent subspace model. This would quantify how much deviation from exact symmetry can be tolerated before the relational advantage disappears.
+with a shrinkage prior or code on `δ`. Setting `δ=0` gives the exact orbit; allowing unrestricted `δ` recovers the independent subspace model. This would quantify how much deviation from exact symmetry can be tolerated before the relational advantage disappears.
 
 14.2 Stabilizer-adaptive labels
 
-If  is invariant under a nontrivial subgroup, the orbit contains fewer than  distinct states. The effective label cost should depend on
+If `η` is invariant under a nontrivial subgroup, the orbit contains fewer than `g` distinct states. The effective label cost should depend on
 
+`Cg⋅η=gStabη.`
 
 A stabilizer-adaptive code could improve finite-sample behavior near symmetric strata.
 
@@ -954,10 +1045,13 @@ Cyclic structure constrains a regime-change problem in two different ways. It ca
 
 For a known boundary, these produce three leading MDL structures:
 
+`penAL=dfull2logL+O1,`
 
+`penBL=dfund2logL+O1,`
 
 and
 
+`penCL=logg−1+O1,`
 
 with the final expression understood as a two-part structural code on a regular orbit stratum.
 
@@ -965,8 +1059,11 @@ The Monte Carlo results strongly validate the full and independent-fundamental c
 
 The essential conclusion is therefore not that cyclic groups possess one universal detection threshold. It is that different levels of geometric knowledge define different statistical questions:
 
+`Do the distributions differ arbitrarily?`
 
+`Do they differ within a selected representation?`
 
+`Is one an exact symmetry transform of the other?`
 
 Their answers carry different complexity increments. That distinction is the correct foundation for future work on cyclic changepoints, phase transitions, biological reading frames, and symmetry-aware sequential detection.
 
@@ -1030,8 +1127,9 @@ Appendix B. Reading the empirical slopes
 
 The raw-score regression is the primary test of the theoretical penalty coefficients. Suppose
 
+`S=LG−clogL+b+ϵ.`
 
-Regressing the mean score on , , and effect indicators should recover coefficient one on  and coefficient  on . The extremely high  values indicate that this affine approximation describes the simulated mean scores over the tested grid.
+Regressing the mean score on `LG`, `logL`, and effect indicators should recover coefficient one on `LG` and coefficient `−c` on `logL`. The extremely high `R2` values indicate that this affine approximation describes the simulated mean scores over the tested grid.
 
 The calibrated-power crossover slopes answer a different question. Configuration-specific null calibration adds an empirical threshold that may itself vary with length. Those crossovers are appropriate for comparing practical sample requirements at a common false-positive target, but their slopes are not expected to equal the raw MDL coefficient.
 

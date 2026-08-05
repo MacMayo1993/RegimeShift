@@ -20,7 +20,9 @@ import pandas as pd
 import pytest
 
 from regimeshift.analysis import (
+    K_STAR,
     crossover_bootstrap,
+    dimension_increment,
     crossover_ratio_bootstrap,
     gain_residual_regression,
     predicted_slope,
@@ -29,6 +31,7 @@ from regimeshift.analysis import (
 )
 from regimeshift.detectors import (
     fit_failure_count,
+    nats_to_bits,
     fit_fundamental,
     reset_fit_failures,
     split_penalty,
@@ -415,3 +418,113 @@ def test_detector_scores_are_start_independent():
                 det.fit_fundamental.__defaults__ = original
             for name, value in baseline.items():
                 assert value == pytest.approx(single[name], abs=1e-5), name
+
+
+# --------------------------------------------------------------------------
+# reconstructed-constant provenance
+# --------------------------------------------------------------------------
+
+
+def test_manuscript_constants_match_the_live_module_values():
+    """Exact reproduction depends on these constants, so the machine-readable
+    provenance table must never drift from the code it describes."""
+    import regimeshift.scenarios as scenarios
+    from regimeshift.detectors import label_cost
+    from regimeshift.scenarios import MANUSCRIPT_CONSTANTS
+
+    for name, entry in MANUSCRIPT_CONSTANTS.items():
+        assert entry["basis"], f"{name} has no stated basis"
+        assert entry["section"], f"{name} has no manuscript section"
+        assert isinstance(entry["recovered_from_manuscript"], bool)
+        if name == "LABEL_COST":
+            # A formula rather than a scalar; check the implementation matches it.
+            for m in (2, 3, 5, 9):
+                assert label_cost(m) == pytest.approx(np.log(m - 1))
+            continue
+        assert entry["value"] == getattr(scenarios, name), f"{name} drifted from its table entry"
+
+
+def test_every_scenario_constant_is_documented():
+    """A new scenario constant must come with provenance, not appear silently."""
+    from regimeshift.scenarios import MANUSCRIPT_CONSTANTS
+
+    documented = set(MANUSCRIPT_CONSTANTS)
+    expected = {
+        "INDEPENDENT_RADIUS_FACTOR", "INDEPENDENT_ANGLE_RAD",
+        "INDEPENDENT_M2_FACTOR", "HIGHER_MODE_FACTOR", "LABEL_COST",
+    }
+    assert documented == expected
+    # Every one of them is quoted from the manuscript. An earlier version of this
+    # repository guessed three, believing the equations were images; they are
+    # OMML and the first extraction pass simply dropped them.
+    assert all(v["recovered_from_manuscript"] for v in MANUSCRIPT_CONSTANTS.values())
+
+
+# --------------------------------------------------------------------------
+# K* = 1/(2 ln 2): the per-dimension penalty quantum, in bits
+# --------------------------------------------------------------------------
+
+
+def test_k_star_is_the_nats_to_bits_conversion_of_one_half():
+    """K* is definitional, not empirical: it is Schwarz's one-half expressed in
+    bits. Pinning it as such keeps anyone from reading it as a fitted quantity."""
+    assert K_STAR == 1.0 / (2.0 * np.log(2.0))
+    assert K_STAR == pytest.approx(0.7213475204444817, abs=1e-15)
+    assert nats_to_bits(0.5) == K_STAR
+    assert nats_to_bits(1.0) == pytest.approx(1.0 / np.log(2.0))
+
+
+@pytest.mark.parametrize("m", [2, 3, 4, 5, 6, 7, 8])
+@pytest.mark.parametrize("detector", ["full", "fundamental", "shared_orbit"])
+def test_every_predicted_slope_in_bits_is_an_integer_multiple_of_k_star(detector, m):
+    """The structural claim: ``(d/2) log n`` nats is ``d * K*`` bits, so each
+    model's leading coefficient is a whole number of K* -- ``m - 1`` for Model A,
+    ``d_fund`` for Model B, and zero for Model C. The three-way hierarchy is how
+    many K* a model pays to cross the boundary."""
+    d = dimension_increment(detector, m)
+    assert d == int(d)
+    assert predicted_slope(detector, m, units="nats") == d / 2.0
+    assert predicted_slope(detector, m, units="bits") == pytest.approx(d * K_STAR, abs=1e-15)
+
+
+def test_shared_orbit_pays_zero_k_star():
+    """The paper's central result, restated in these units."""
+    for m in (2, 4, 6):
+        assert dimension_increment("shared_orbit", m) == 0
+        assert predicted_slope("shared_orbit", m, units="bits") == 0.0
+
+
+def test_dimension_increments_match_the_three_model_classes():
+    assert [dimension_increment("full", m) for m in (2, 4, 6)] == [1, 3, 5]
+    assert [dimension_increment("fundamental", m) for m in (2, 3, 6)] == [1, 2, 2]
+    for bad in ("mystery", ""):
+        with pytest.raises(ValueError):
+            dimension_increment(bad, 4)
+
+
+def test_unknown_units_are_rejected():
+    for bad in ("nat", "BITS", "decibans", ""):
+        with pytest.raises(ValueError, match="units"):
+            predicted_slope("full", 4, units=bad)
+    with pytest.raises(ValueError, match="units"):
+        score_regression_summary(synthetic_frame(), units="decibans")
+
+
+def test_summary_converts_every_slope_column_together():
+    """A units switch must convert all slope-valued columns and leave the
+    dimensionless ones alone, or the report becomes internally inconsistent."""
+    frame = synthetic_frame(detector="fundamental", m=4, slope=1.0).assign(
+        scenario="independent_fundamental"
+    )
+    mapping = {"fundamental": "independent_fundamental"}
+    nats = score_regression_summary(frame, scenario_by_detector=mapping).iloc[0]
+    bits = score_regression_summary(frame, scenario_by_detector=mapping, units="bits").iloc[0]
+
+    assert nats["units"] == "nats" and bits["units"] == "bits"
+    for column in ("penalty_slope", "penalty_slope_wls", "residual_slope", "predicted_slope"):
+        assert bits[column] == pytest.approx(nats[column] / np.log(2), abs=1e-12)
+    # Dimensionless quantities must not move.
+    for column in ("beta_gain", "r_squared", "condition_number", "n_points", "k_star_multiple"):
+        assert bits[column] == pytest.approx(nats[column])
+    # And the predicted slope in bits lands exactly on d * K*.
+    assert bits["predicted_slope"] == pytest.approx(bits["k_star_multiple"] * K_STAR, abs=1e-12)
