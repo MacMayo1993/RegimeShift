@@ -123,6 +123,53 @@ interpolation lives in the bounded term, i.e. at finite `n`, which is exactly
 where the tolerance question lives. A genuine interpolation of the *leading*
 coefficient would need `tau` shrinking with `n`.
 
+## Choosing the geometry instead of assuming it
+
+Every efficiency number above is an *oracle* number — the matching detector is
+chosen in advance. `regimeshift.select_model` chooses from the data.
+
+It cannot compare detector scores, because each is measured against its own
+null: Model A pools an unrestricted multinomial, Models B/C/D pool a fundamental
+coordinate. What is comparable is the total description length under each
+hypothesis, and the detector scores fall out of those as exact differences.
+Selecting the shortest code answers both questions at once, since the two nulls
+are candidates too:
+
+```python
+from regimeshift import select_model
+
+result = select_model(left, right, m=6)
+result.selected          # 'shared_orbit'
+result.declared_change   # True
+result.selected_shift    # 1
+result.margin            # nats over the runner-up
+```
+
+At `m = 6`, effect 0.25: on exact-orbit data it recovers `shared_orbit` 66% /
+90% / 94% of the time at 200 / 800 / 3200 per side; on higher-mode data it
+reaches `full` 100% of the time by 3200; and with no change at all it picks a
+null, with a false-change rate of 4.5% at the shortest length and 0% beyond.
+
+### What that turned up
+
+On the manuscript's `independent_fundamental` scenario the selector picks
+`fundamental` only 3% of the time at `m = 6` — it picks `approximate_orbit`
+instead. That is the selector being right. Section 8.2 fixes the angular offset
+at 0.713 rad while the one-step rotation `2π/m` *shrinks* with `m`, so the
+scenario slides toward being an orbit:
+
+| m | distance from nearest orbit | selector picks |
+|---:|---:|---|
+| 3 | 1.12 effects | `fundamental` 100% |
+| 4 | 0.76 effects | `fundamental` 91% |
+| 5 | 0.53 effects | `approximate_orbit` 73% |
+| 6 | 0.40 effects | `approximate_orbit` 93% |
+
+So the scenario meant to represent Model B's territory does not hold its
+distance from Model C's hypothesis constant across `m`. See
+[`docs/paper-notes.md`](docs/paper-notes.md) for what that implies for the
+manuscript's `m`-dependent results.
+
 ## How to describe this work
 
 The defensible claim, and the wording two rounds of external methodological
@@ -357,6 +404,8 @@ regimeshift/
   scenarios.py    the three data-generating scenarios (Section 8.2)
   simulation.py   Monte Carlo engine, calibration, seeding (Section 8)
   analysis.py     score regressions and power crossovers (Section 8.3, App. B)
+  selection.py    code lengths and model selection among the geometries
+  manifest.py     run provenance: commit, environment, checksums
   runner.py       deterministic parallel runner with checkpointing
   cli.py          python -m regimeshift
 examples/         worked_example.py -- one interpretable figure

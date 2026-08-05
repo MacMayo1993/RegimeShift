@@ -36,6 +36,7 @@ from .fourier import (
 )
 from .gains import population_gains
 from .scenarios import MANUSCRIPT_CONSTANTS, Segments, build_segments
+from .selection import CANDIDATES, Selection, code_lengths, select_model
 from .simulation import BASE_SEED, Config, build_grid, run_config
 
 __version__ = "3.1.0"
@@ -45,7 +46,11 @@ __all__ = [
     "BASE_SEED",
     "Config",
     "DetectorResult",
+    "CANDIDATES",
     "MANUSCRIPT_CONSTANTS",
+    "Selection",
+    "code_lengths",
+    "select_model",
     "Segments",
     "build_grid",
     "build_segments",

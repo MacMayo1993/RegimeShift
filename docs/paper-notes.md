@@ -308,6 +308,68 @@ inside the grid, so only one effect yields an internal crossover and the ratios
 (18.95, 25.12, NaN) are dividing near-noise by near-noise. The `_n` columns show
 this; the exact-orbit and independent-fundamental rows are the usable ones.
 
+## Model selection, and a scenario defect it exposed
+
+Every efficiency number in the manuscript is an *oracle* number: the detector
+matching the generating geometry is chosen in advance. `regimeshift.selection`
+chooses it from the data instead.
+
+Selection cannot use the detector scores. A score is `gain - penalty` against
+*its own* null, and those nulls differ — Model A pools an unrestricted
+multinomial, Models B/C/D pool a fundamental coordinate — so the scores have
+different origins. `code_lengths` returns the total description length of the
+same data under each hypothesis, which is comparable, and the detector scores
+fall out exactly as differences (asserted to 1e-9):
+
+    score_A = L(null_full) - L(full)
+    score_B = L(null_fundamental) - L(fundamental)
+    score_C = L(null_fundamental) - L(shared_orbit)
+
+Selecting the shortest code answers both questions at once — whether a change
+occurred and what kind — and the six candidates include the two nulls, so no
+separate detection step is needed.
+
+At `m = 6`, effect 0.25, 200 trials:
+
+| generated from | n/side | picks the generating family | false-change rate |
+|---|---:|---:|---:|
+| exact orbit | 200 / 800 / 3200 | 66% / 90% / 94% | — |
+| higher mode | 200 / 800 / 3200 | 1% / 25% / 100% | — |
+| no change | 200 / 800 / 3200 | — | 4.5% / 0% / 0% |
+
+### The defect
+
+The `independent_fundamental` scenario selects `fundamental` almost never at
+`m = 6` — 3% — choosing `approximate_orbit` 93% of the time instead. That is
+the selector being right, not wrong.
+
+Section 8.2 fixes the angular offset at **0.713 rad** while the one-step
+rotation is `2 pi / m`, which *shrinks* as `m` grows. The scenario therefore
+slides toward being an orbit:
+
+| m | one-step rotation | distance from nearest orbit | selector picks |
+|---:|---:|---:|---|
+| 3 | 2.094 rad | 1.12 effects | `fundamental` 100% |
+| 4 | 1.571 rad | 0.76 effects | `fundamental` 91% |
+| 5 | 1.257 rad | 0.53 effects | `approximate_orbit` 73% |
+| 6 | 1.047 rad | 0.40 effects | `approximate_orbit` 93% |
+
+The crossover near 0.6 effects matches Model D's winning band independently
+measured in the README sweep.
+
+**Why this matters for the manuscript.** The scenario meant to represent "Model
+B territory" is not holding its distance from Model C's hypothesis constant
+across `m`. Any `m`-dependence in the independent-fundamental results — Table 6's
+row included — is therefore partly an artifact of the scenario drifting toward
+an orbit as `m` increases, not a property of the detectors. It also explains, and
+quantifies, the earlier observation that Model C stays competitive there at
+`m = 6`: the data is only 0.40 effects from its hypothesis.
+
+The fix is to hold the angular offset at a fixed *fraction* of `2 pi / m`, or to
+hold the orbit distance itself constant, rather than fixing it in radians. This
+implementation keeps the manuscript's constant so the reproduction stays
+faithful; `tests/test_selection.py` pins the drift so it cannot go unnoticed.
+
 ## Not implemented
 
 Scope limits carried over from Sections 11 and 13 of the manuscript:
