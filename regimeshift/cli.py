@@ -23,6 +23,8 @@ from pathlib import Path
 import pandas as pd
 
 from .analysis import (
+    K_STAR,
+    UNITS,
     crossover_bootstrap,
     crossover_estimates,
     crossover_ratio_bootstrap,
@@ -35,11 +37,12 @@ from .simulation import BASE_SEED, build_grid
 GRIDS = {"production": PRODUCTION_GRID, "quick": QUICK_GRID}
 
 
-def _write_reports(results: pd.DataFrame, out_dir: Path, n_boot: int = 500) -> None:
+def _write_reports(results: pd.DataFrame, out_dir: Path, n_boot: int = 500,
+                   units: str = "nats") -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     results.to_csv(out_dir / "full_results.csv", index=False)
 
-    regressions = score_regression_summary(results)
+    regressions = score_regression_summary(results, units=units)
     regressions.to_csv(out_dir / "score_regression_summary.csv", index=False)
 
     crossovers = crossover_estimates(results)
@@ -64,9 +67,11 @@ def _write_reports(results: pd.DataFrame, out_dir: Path, n_boot: int = 500) -> N
 
     n_files = 4 + (2 if n_boot > 0 else 0)
     print(f"\nwrote {n_files} files to {out_dir}\n")
-    print("Raw-score regressions (penalty slope vs prediction):")
+    print(f"Raw-score regressions, slopes in {units} per e-fold "
+          f"(bits = multiples of K* = 1/(2 ln 2) = {K_STAR:.6f}):")
     cols = [c for c in ["detector", "m", "beta_gain", "penalty_slope", "penalty_slope_wls",
-                        "residual_slope", "predicted_slope", "r_squared", "condition_number"]
+                        "residual_slope", "predicted_slope", "k_star_multiple",
+                        "r_squared", "condition_number"]
             if c in regressions]
     print(regressions[cols].to_string(index=False))
     print("\nMedian calibrated crossover ratios:")
@@ -84,19 +89,23 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--base-seed", type=int, default=BASE_SEED)
     run.add_argument("--checkpoint", type=Path, default=None, help="defaults to <out>/checkpoint.csv")
     run.add_argument("--no-progress", action="store_true")
+    run.add_argument("--units", choices=UNITS, default="nats",
+                     help="units for the reported slope columns")
     run.add_argument("--n-boot", type=int, default=500,
                      help="bootstrap replicates for crossover intervals; 0 disables")
 
     analyse = sub.add_parser("analyse", help="re-run the reports on an existing results file")
     analyse.add_argument("--results", required=True, type=Path)
     analyse.add_argument("--out", required=True, type=Path)
+    analyse.add_argument("--units", choices=UNITS, default="nats",
+                     help="units for the reported slope columns")
     analyse.add_argument("--n-boot", type=int, default=500,
                          help="bootstrap replicates for crossover intervals; 0 disables")
 
     args = parser.parse_args(argv)
 
     if args.command == "analyse":
-        _write_reports(pd.read_csv(args.results), args.out, n_boot=args.n_boot)
+        _write_reports(pd.read_csv(args.results), args.out, n_boot=args.n_boot, units=args.units)
         return 0
 
     spec = GRIDS[args.grid]
@@ -113,7 +122,7 @@ def main(argv: list[str] | None = None) -> int:
         configs, checkpoint=checkpoint, workers=args.workers,
         base_seed=args.base_seed, progress=not args.no_progress,
     )
-    _write_reports(results, args.out, n_boot=args.n_boot)
+    _write_reports(results, args.out, n_boot=args.n_boot, units=args.units)
     return 0
 
 

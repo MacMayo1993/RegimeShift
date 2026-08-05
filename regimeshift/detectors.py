@@ -31,6 +31,8 @@ from .fourier import (
 __all__ = [
     "DetectorResult",
     "GRADIENT_TOLERANCE",
+    "K_STAR",
+    "nats_to_bits",
     "fit_failure_count",
     "reset_fit_failures",
     "split_penalty",
@@ -63,6 +65,28 @@ class DetectorResult:
     """Relative group element chosen by the shared-orbit detector."""
 
 
+K_STAR = 1.0 / (2.0 * np.log(2.0))
+"""The per-dimension leading penalty rate, in bits per e-fold: ``1/(2 ln 2)``.
+
+Scoring throughout this package is in nats, where a regular known-split
+increment has leading term ``(d/2) log n``. Converting to bits gives
+
+    (d/2) log2(n)  =  d / (2 ln 2) * ln n  =  d * K_STAR * ln n
+
+so every leading coefficient in the framework is an integer multiple of
+``K_STAR``: ``(m - 1)`` of them for Model A, ``d_fund`` for Model B, and *zero*
+for Model C. The three-way hierarchy is how many ``K_STAR`` a model pays to
+cross the boundary.
+
+Note that this constant is definitional, not a discovery -- it is just the
+nats-to-bits conversion of Schwarz's one-half. Anything counting half a
+parameter per e-fold in base 2 produces it. Section 12 of the manuscript notes
+that the same number appears in an East-model inverse-gap asymptotic and is
+careful to call the resemblance suggestive rather than explanatory; the
+resemblance carries weight only if the dynamical occurrence is *not* similarly
+a units artefact.
+"""
+
 GRADIENT_TOLERANCE = 1e-6
 """Relative first-order tolerance defining a converged fundamental-family fit."""
 
@@ -89,6 +113,11 @@ def reset_fit_failures() -> None:
 def fit_failure_count() -> int:
     """Number of non-converged fits since the last reset in this process."""
     return _FIT_FAILURES
+
+
+def nats_to_bits(nats: float) -> float:
+    """Convert a codelength or codelength coefficient from nats to bits."""
+    return nats / np.log(2.0)
 
 
 def split_penalty(dim: int, n_left: int, n_right: int) -> float:

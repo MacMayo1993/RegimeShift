@@ -11,10 +11,14 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from .detectors import K_STAR, nats_to_bits
 from .simulation import BASE_SEED
 
 __all__ = [
     "PREDICTED_SLOPES",
+    "K_STAR",
+    "UNITS",
+    "dimension_increment",
     "predicted_slope",
     "score_regression",
     "gain_residual_regression",
@@ -26,15 +30,42 @@ __all__ = [
 ]
 
 
-def predicted_slope(detector: str, m: int) -> float:
-    """Theoretical coefficient of ``log n`` in the complexity increment."""
+UNITS = ("nats", "bits")
+
+#: Slope-valued report columns, i.e. the ones that carry units of
+#: codelength-per-e-fold and must be converted together.
+_SLOPE_COLUMNS = (
+    "penalty_slope", "penalty_slope_se",
+    "penalty_slope_wls", "penalty_slope_wls_se",
+    "residual_slope", "residual_slope_se",
+    "predicted_slope", "weighting_shift",
+)
+
+
+def dimension_increment(detector: str, m: int) -> int:
+    """Continuous-dimension increment ``d`` of a detector's alternative."""
     if detector == "full":
-        return (m - 1) / 2.0
+        return m - 1
     if detector == "fundamental":
-        return (1 if m == 2 else 2) / 2.0
+        return 1 if m == 2 else 2
     if detector == "shared_orbit":
-        return 0.0
+        return 0
     raise ValueError(f"unknown detector {detector!r}")
+
+
+def predicted_slope(detector: str, m: int, units: str = "nats") -> float:
+    """Theoretical coefficient of ``log n`` in the complexity increment.
+
+    In nats this is ``d/2``. In bits it is ``d * K_STAR`` exactly, since
+    ``(d/2) log2(n) = d/(2 ln 2) * ln n`` -- so every leading coefficient in the
+    framework is an integer multiple of ``K_STAR = 1/(2 ln 2)``, and the
+    three-way hierarchy is how many of them a model pays: ``m - 1`` for Model A,
+    ``d_fund`` for Model B, and zero for Model C.
+    """
+    if units not in UNITS:
+        raise ValueError(f"units must be one of {UNITS}, got {units!r}")
+    nats = dimension_increment(detector, m) / 2.0
+    return nats if units == "nats" else nats_to_bits(nats)
 
 
 #: Convenience mapping used by the tests and the reports.
@@ -168,14 +199,25 @@ def gain_residual_regression(frame: pd.DataFrame, weighted: bool = False) -> dic
     }
 
 
-def score_regression_summary(results: pd.DataFrame, scenario_by_detector: dict[str, str] | None = None) -> pd.DataFrame:
+def score_regression_summary(
+    results: pd.DataFrame,
+    scenario_by_detector: dict[str, str] | None = None,
+    units: str = "nats",
+) -> pd.DataFrame:
     """Run :func:`score_regression` for each detector and group order.
 
     ``scenario_by_detector`` selects the *matched* scenario for each detector:
     the full detector against the full-space higher-mode change (defined for
     ``m >= 4``), and each constrained detector against the scenario its
     hypothesis describes.
+
+    ``units`` converts the slope-valued columns. The fits themselves are done in
+    nats; ``"bits"`` divides them by ``ln 2``, which makes each predicted slope
+    an exact multiple of ``K_STAR`` and adds a ``k_star_multiple`` column
+    reporting that multiple (which is just ``d``).
     """
+    if units not in UNITS:
+        raise ValueError(f"units must be one of {UNITS}, got {units!r}")
     scenario_by_detector = scenario_by_detector or {
         "full": "higher_mode",
         "fundamental": "independent_fundamental",
@@ -217,11 +259,21 @@ def score_regression_summary(results: pd.DataFrame, scenario_by_detector: dict[s
         "detector", "scenario", "m", "beta_gain", "beta_gain_se",
         "penalty_slope", "penalty_slope_se", "penalty_slope_wls", "penalty_slope_wls_se",
         "weighting_shift", "residual_slope", "residual_slope_se",
-        "predicted_slope", "r_squared", "condition_number", "n_points",
+        "predicted_slope", "k_star_multiple", "units",
+        "r_squared", "condition_number", "n_points",
     ]
     if not rows:
         return pd.DataFrame(columns=columns)
     frame = pd.DataFrame(rows)
+    if "detector" in frame.columns and "m" in frame.columns:
+        frame["k_star_multiple"] = [
+            dimension_increment(d, int(m)) for d, m in zip(frame["detector"], frame["m"])
+        ]
+    frame["units"] = units
+    if units == "bits":
+        for column in _SLOPE_COLUMNS:
+            if column in frame.columns:
+                frame[column] = frame[column].astype(float).map(nats_to_bits)
     ordered = [c for c in columns if c in frame.columns] + [c for c in frame.columns if c not in columns]
     return frame[ordered].sort_values(["detector", "m"]).reset_index(drop=True)
 

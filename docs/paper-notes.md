@@ -125,6 +125,35 @@ look like bugs until you see why they are not:
    share a null, `gain_B >= gain_C`. Both are asserted in
    `tests/test_detectors.py`.
 
+## K* = 1/(2 ln 2) as the penalty quantum
+
+Section 4.4 converts the regular penalty to bits: `(Δd/2) log2 L = Δd/(2 ln 2) ln L`,
+and Section 12 notes that `1/(2 ln 2)` also appears in an East-model inverse-gap
+asymptotic, calling the resemblance suggestive rather than explanatory.
+
+Naming that constant `K*` makes the paper's hierarchy a counting statement.
+Every leading coefficient in the framework is an integer multiple of it:
+
+| model | d | nats per ln n | bits per ln n |
+|---|---|---|---|
+| A. full | `m - 1` | `(m-1)/2` | `(m-1) K*` |
+| B. fundamental | `d_fund` | `d_fund/2` | `d_fund K*` |
+| C. shared orbit | 0 | 0 | **0** |
+
+So "Model C has no leading continuous-dimension penalty" becomes "Model C pays
+zero `K*` per e-fold". `regimeshift.K_STAR` exports the constant, `predicted_slope`
+takes a `units` argument, and the reports accept `--units bits`, which adds a
+`k_star_multiple` column.
+
+**A caution about Section 12.** `K*` arising as the per-dimension BIC rate in
+bits is *definitional*, not a discovery: it is Schwarz's one-half expressed in
+base 2, and any quantity counting half a parameter per e-fold in bits produces
+it. The East-model resemblance is therefore only meaningful if the dynamical
+occurrence is not likewise a units artefact — if `1/(2 ln 2)` enters there from
+the structure of the constrained generator rather than from a choice of base.
+That is a sharper form of the manuscript's own caveat, and it is the question a
+bridge between the levels would have to answer first.
+
 ## Analysis-integrity work beyond the manuscript
 
 An external methodological review raised five concerns about the *analysis*

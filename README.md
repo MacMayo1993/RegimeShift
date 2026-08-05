@@ -57,6 +57,33 @@ with `d_fund = 1` for `m = 2` (the sign representation) and `d_fund = 2` for
 through *parameter sharing*, and that is why its leading logarithmic coefficient
 is zero rather than merely small.
 
+### The same hierarchy, in bits
+
+Converting to bits makes the structure a counting statement. Since
+`(d/2)·log₂n = d/(2 ln 2)·ln n`, every leading coefficient is an integer
+multiple of
+
+```
+K* = 1/(2 ln 2) = 0.7213475...
+```
+
+the per-dimension penalty rate in bits per e-fold. Model A pays `(m-1)·K*`,
+Model B pays `d_fund·K*`, and **Model C pays zero K\***. The three-way hierarchy
+is just how many `K*` a model spends to cross the boundary.
+
+`K*` is definitional rather than empirical — it is Schwarz's one-half expressed
+in base 2, and anything counting half a parameter per e-fold in bits produces
+it. That matters for reading §12 of the manuscript, which notes the same number
+in an East-model inverse-gap asymptotic: the resemblance carries weight only if
+the dynamical occurrence is *not* likewise a units artefact.
+
+```bash
+python -m regimeshift analyse --results results/v3/full_results.csv \
+                              --out results/v3-bits --units bits
+```
+
+reports every slope column in bits alongside a `k_star_multiple` column.
+
 ## How to describe this work
 
 The defensible claim, and the wording two rounds of external methodological
