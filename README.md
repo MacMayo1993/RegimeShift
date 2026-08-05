@@ -315,10 +315,20 @@ seeded.
 
 ## What the results show
 
+From the committed production run (468,000 datasets, `results/v3-production/`):
+
+| detector | m | penalty slope | predicted |
+|---|---:|---:|---:|
+| full | 4, 5, 6 | 1.488, 1.967, 2.488 | 1.5, 2.0, 2.5 |
+| fundamental | 2 | 0.522 | 0.5 |
+| fundamental | 3–6 | 0.996, 0.971, 0.964, 1.036 | 1.0 |
+| shared orbit | 2–6 | −0.228, 0.041, 0.083, 0.139, 0.122 | 0 |
+
 * The full and fundamental coefficients closely track their predicted
   dimensions — this is the clearest evidence that an independently fitted
   fundamental family obeys a different complexity law from the unrestricted
-  multinomial.
+  multinomial. Note the fundamental slope stays flat near 1.0 from `m = 3` to
+  `m = 6` while the full slope climbs from 1.5 to 2.5.
 * The shared-orbit detector has a **near-zero** leading logarithmic coefficient,
   not an exactly constant finite-sample score. Residual drift is expected from
   maximisation over nonidentity shifts, finite-sample MLE bias, and the singular

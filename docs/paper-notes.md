@@ -260,6 +260,54 @@ Model D is deliberately **not** wired into `run_all_detectors` or the production
 grid, which reproduce the manuscript's three-model comparison. It is available
 through the API and covered by `tests/test_approximate_orbit.py`.
 
+## The committed production run
+
+`results/v3-production/` holds one complete run of the Table 2 design — 312
+configurations, 936 detector rows, 468,000 datasets, base seed 20260713, 17.4
+minutes on 4 workers — with a `run_manifest.json` carrying the commit,
+environment and per-file checksums.
+
+Its numbers reproduce the manuscript's, and in most cells land closer to theory:
+
+| detector | m | this run | (WLS) | manuscript | predicted |
+|---|---:|---:|---:|---:|---:|
+| full | 4 | 1.488 | 1.504 | 1.515 | 1.5 |
+| full | 5 | **1.967** | 1.994 | *2.119* | 2.0 |
+| full | 6 | 2.488 | 2.518 | 2.468 | 2.5 |
+| fundamental | 2 | 0.522 | 0.474 | 0.457 | 0.5 |
+| fundamental | 3 | 0.996 | 0.979 | 1.047 | 1.0 |
+| fundamental | 4 | 0.971 | 0.961 | 1.001 | 1.0 |
+| fundamental | 5 | 0.964 | 0.988 | 1.019 | 1.0 |
+| fundamental | 6 | 1.036 | 1.017 | 0.967 | 1.0 |
+| shared orbit | 2 | -0.228 | -0.074 | -0.093 | 0 |
+| shared orbit | 3 | 0.041 | 0.090 | 0.144 | 0 |
+| shared orbit | 4 | 0.083 | 0.165 | 0.160 | 0 |
+| shared orbit | 5 | 0.139 | 0.142 | 0.127 | 0 |
+| shared orbit | 6 | 0.122 | 0.179 | 0.206 | 0 |
+
+**One result worth the manuscript's attention.** Section 9.1 singles out the
+`m = 5` full-model slope, which the manuscript reports as 2.119 — "exceeded 2.0
+by about 0.119, a finite-sample deviation of roughly two standard errors" — and
+discusses it as a real feature. This run gets **1.967** (WLS 1.994) at the same
+design and seed convention, i.e. right on 2.0, and the gain-residual slope there
+is 0.033, so the raw gain tracks `n G` with no drift to explain. The anomaly
+does not reproduce. Section 9.1 appears to be interpreting that run's Monte
+Carlo noise, and the sentence should probably go.
+
+The calibrated crossover ratios also track Table 6 closely at the group orders
+where the models differ — shared/full of 0.687, 0.630, 0.608 for `m = 4, 5, 6`
+against the manuscript's 0.705, 0.672, 0.610 — while coming out lower at
+`m = 2, 3` (0.758, 0.788 against 0.883, 0.943).
+
+Two caveats about the shipped files. The manifest records `dirty: true` because
+the run was launched with the results README uncommitted; the commit it names is
+the infrastructure commit, and no code differed. And the `higher_mode` rows of
+`crossover_ratio_summary.csv` are meaningless — under the corrected
+misspecification scenario the constrained detectors barely reach 50% power
+inside the grid, so only one effect yields an internal crossover and the ratios
+(18.95, 25.12, NaN) are dividing near-noise by near-noise. The `_n` columns show
+this; the exact-orbit and independent-fundamental rows are the usable ones.
+
 ## Not implemented
 
 Scope limits carried over from Sections 11 and 13 of the manuscript:
