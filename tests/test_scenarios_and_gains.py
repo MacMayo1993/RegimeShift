@@ -152,9 +152,10 @@ def test_constrained_gains_lose_the_out_of_subspace_signal(m):
     segments = build_segments(m, "higher_mode", 0.25)
     gains = population_gains(segments.p_left, segments.p_right, m)
     assert gains["full"] > gains["fundamental"] > 0
-    assert gains["fundamental"] >= gains["shared_orbit"] - 1e-12
-    if m > 4:
-        assert gains["fundamental"] > gains["shared_orbit"] + 1e-9
+    # Strict at every group order now that the change is confined to the higher
+    # mode. Under the earlier reading these coincided at m = 4, because the
+    # mode-2 sign flip there is exactly a one-step shift of the fundamental part.
+    assert gains["fundamental"] > gains["shared_orbit"] + 1e-9
 
 
 @pytest.mark.parametrize("m", [2, 3])
@@ -183,19 +184,35 @@ def test_weighted_jsd_respects_asymmetric_weights():
     assert weighted_jensen_shannon(p, q, w_left=0.5) > weighted_jensen_shannon(p, q, w_left=0.9)
 
 
-def test_higher_mode_at_m4_is_still_an_exact_orbit_in_the_full_space():
-    """A property worth pinning down: at m = 4 the mode-2 component is the sign
-    representation, which flips under a one-step shift. With the antisymmetric
-    placement used by the scenario, the two segments therefore remain exact
-    group transforms of one another -- but in the *full* simplex, outside the
-    fundamental family. The constrained detectors are still misspecified,
-    because neither family can represent the mode-2 component at all."""
-    segments = build_segments(4, "higher_mode", 0.25)
-    np.testing.assert_allclose(segments.p_right, np.roll(segments.p_left, 1), atol=1e-13)
+def test_higher_mode_is_not_an_exact_orbit_at_any_shift():
+    """The corrected reading of Section 8.2: the mode-2 sign flip *is* the
+    change, so both segments share a fundamental coordinate and differ only
+    outside the fundamental subspace.
 
-    # At m = 5 and m = 6 the higher mode does not flip sign, so the orbit
-    # relation is genuinely broken as well.
-    for m in (5, 6):
+    An earlier reading also rotated the fundamental coordinate. That left the
+    change carrying a full-strength exact-orbit component, so Model C kept about
+    half the population signal and stayed competitive -- contradicting Table 7.
+    Under this reading the scenario is a genuine misspecification for Model C at
+    every group order, and at no shift is it an orbit relation.
+    """
+    for m in (4, 5, 6):
         segments = build_segments(m, "higher_mode", 0.25)
         for s in range(m):
             assert not np.allclose(segments.p_right, np.roll(segments.p_left, s), atol=1e-6)
+        # Both sides share the same fundamental coordinate.
+        np.testing.assert_allclose(segments.theta_left, segments.theta_right, atol=1e-14)
+
+
+@pytest.mark.parametrize("m", [4, 5, 6])
+def test_higher_mode_reproduces_the_manuscript_misspecification_pattern(m):
+    """Table 7 reports full power 0.962-0.999 against fundamental 0.182-0.399
+    and shared-orbit 0.044-0.082 -- the last of which is *below* the 5% nominal
+    rate. The population gains must show the same structure: the fundamental
+    family keeps only a small share of the full gain, and the shared-orbit gain
+    is negative, meaning aligned pooling is worse than not aligning at all.
+    """
+    segments = build_segments(m, "higher_mode", 0.25)
+    gains = population_gains(segments.p_left, segments.p_right, m)
+    assert gains["full"] > 0
+    assert 0 < gains["fundamental"] < 0.1 * gains["full"]
+    assert gains["shared_orbit"] < 0

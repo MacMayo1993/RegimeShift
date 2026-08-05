@@ -8,6 +8,36 @@ The manuscript is in [`docs/`](docs/), together with
 [`docs/paper-notes.md`](docs/paper-notes.md), which records exactly which
 manuscript quantities this code reproduces and which had to be reconstructed.
 
+## The idea, before the equations
+
+Imagine a system that cycles through `m` labelled states — reading frames in a
+codon sequence, phases of a rotating machine, a sensor's operating modes, a
+categorical signal with rotational labels. You observe counts over these
+categories, and at some point the distribution changes.
+
+There are three genuinely different things that change could be.
+
+1. **Anything at all.** The category probabilities simply became different
+   numbers. Nothing about the system's cyclic structure constrains the change.
+2. **A change within the cyclic structure.** The system stayed in the family of
+   patterns its symmetry allows, but moved to a different one — a different
+   shape, still a "cyclic-looking" shape.
+3. **The same pattern, rotated.** The system did not change its state at all.
+   It is doing exactly what it was doing before, one phase over. A three-phase
+   machine slipped a phase; a sequence lost a base and shifted its reading
+   frame.
+
+The third is a much stronger claim than the second, and it is cheaper to
+describe. Under (2) you must specify a whole new pattern for the second
+segment. Under (3) you specify *no new continuous quantity* — the pattern is
+already known — you only say **which way it rotated**, one of `m - 1` choices.
+
+That is the distinction this repository formalises and measures: **dimension
+reduction** (2) versus **parameter sharing** (3). They are usually blurred
+together, and they carry different description-length costs.
+
+![The three model classes](docs/figures/three-models.svg)
+
 ## The claim being tested
 
 A categorical regime change can be modelled at three levels of structural
@@ -115,6 +145,56 @@ checkpoint file. Six reports are written:
 | `crossover_bootstrap.csv` | bootstrap confidence intervals for those lengths |
 | `crossover_ratio_bootstrap.csv` | bootstrap intervals for the median ratios |
 
+## A worked example
+
+```bash
+python examples/worked_example.py     # ~90s, writes docs/figures/worked-example.svg
+```
+
+![Detection rate with and without correct structure](docs/figures/worked-example.svg)
+
+Both panels are at `m = 6` with all three detectors calibrated to a **common 5%
+false-positive rate**, so they compare detection ability rather than threshold
+generosity. Left: the change really is a cyclic rotation of a shared state, and
+the constrained detectors reach any given detection rate at shorter samples.
+Right: the change is a higher Fourier mode outside the fundamental subspace, and
+the ordering reverses — the full detector reaches 100% while the constrained
+detectors are still near 20–30%.
+
+The calibration is what makes this honest. On the raw `score > 0` rule the
+constrained detectors appear to win in *both* panels, because Model C's penalty
+does not grow with `n`. That is a fact about thresholds, not geometry.
+
+## When Model C should lose
+
+A detector that never loses is not being tested. Model C's advantage is
+conditional on its hypothesis, and the suite asserts the failures as firmly as
+the successes:
+
+| Situation | What happens | Where it is pinned |
+|---|---|---|
+| Change leaves the fundamental subspace | Model C's population gain goes **negative** — aligned pooling is worse than not aligning — and calibrated power collapses toward nominal | `test_higher_mode_reproduces_the_manuscript_misspecification_pattern` |
+| Change is in the subspace but not an orbit | Population gain strictly below Model B's; at finite samples the cheaper penalty can still keep it competitive under *mild* deviation (the approximate-orbit regime) | `test_shared_orbit_gain_falls_short_on_independent_changes`, `test_shared_orbit_survives_a_mild_departure_from_exact_symmetry` |
+| No change at all | The raw zero-threshold rule is **not** conservative; at `m = 2` the label cost is exactly zero, so it has no protection | `test_shared_orbit_raw_rule_is_not_conservative` |
+| Segments are short with empty categories | The fitted coordinate is not identified (the likelihood is, so scores are safe) | `test_boundary_fits_are_likelihood_identified_but_not_coordinate_identified` |
+
+## Known boundary versus unknown boundary
+
+This is a **known-boundary model comparison**, not a changepoint discovery
+algorithm. The boundary is supplied; no detector searches for it.
+
+That is a deliberate isolation, not an oversight. Scanning over candidate
+locations adds a location code or multiplicity correction of order `log n` to
+*every* detector. Applying it to one alone would confound boundary multiplicity
+with model dimension, which is precisely the comparison under study
+(Section 4.3). The extension is conceptually separable: it changes all three
+scores by a common term, leaving the continuous-dimension differences — the
+subject of this work — intact, but it introduces search, localisation error and
+false-alarm-rate questions this repository does not address.
+
+If you need to *find* changepoints in categorical data, this is not that tool
+yet; see `docs/related-work.md` §2–3 for methods that are.
+
 ## Testing
 
 The test suite has two layers.
@@ -194,13 +274,20 @@ regimeshift/
   analysis.py     score regressions and power crossovers (Section 8.3, App. B)
   runner.py       deterministic parallel runner with checkpointing
   cli.py          python -m regimeshift
+examples/         worked_example.py -- one interpretable figure
 tests/            structural tests and statistical validation
-docs/             the manuscript and reproduction notes
+docs/             manuscript, reproduction notes, related work, figures
 ```
 
 ## Scope
 
-This is an offline, known-boundary model comparison over independent
+**This is a methodological simulation study.** Every result in this repository
+comes from synthetic data generated by the models under test. No real dataset
+is analysed, and the cyclic-orbit assumption has not been validated empirically
+on one. Treat the sample-efficiency numbers as statements about the simulated
+family, not as field performance.
+
+It is an offline, known-boundary model comparison over independent
 categorical observations. Unknown-boundary scanning, sequential stopping rules,
 Markov or hidden-state extensions, and the block (codon-phase) family in which
 the group acts on phases rather than on the alphabet are not implemented here;

@@ -164,14 +164,26 @@ def build_segments(m: int, scenario: str, effect: float) -> Segments:
         p_right = probabilities(theta_right, m)
         return Segments(m, scenario, effect, p_left, p_right, theta_left, theta_right, None)
 
-    # higher_mode: exact-orbit base plus an antisymmetric mode-2 component.
+    # higher_mode: the mode-2 sign flip *is* the change. Both segments share the
+    # same fundamental coordinate, which only sets the operating point away from
+    # uniform; the two sides differ solely by an antisymmetric mode-2 component.
+    #
+    # Section 8.2 says a mode-2 component "was added with opposite signs on the
+    # two sides of the boundary". An earlier reading of this implementation also
+    # rotated the fundamental coordinate, so the change carried a full-strength
+    # exact-orbit component *plus* the higher mode -- which left Model C about
+    # half the population signal and kept it competitive, contradicting Table 7.
+    # With the change confined to the higher mode, the population gains
+    # reproduce Table 7's pattern: the fundamental family retains only a few
+    # percent of the full gain and the shared-orbit gain goes negative, matching
+    # the reported below-nominal shared-orbit power of 0.044-0.082.
     if m < 4:
         raise ValueError(
             "the higher_mode scenario needs m >= 4: at m = 2 mode 2 is trivial and at "
             "m = 3 mode 2 is the conjugate of mode 1, so it lies in the fundamental "
             "component and is not a misspecification"
         )
-    theta_right = rotation_matrix(m, 1) @ theta_left
+    theta_right = theta_left
     extra = higher_mode_logits(m, HIGHER_MODE_FACTOR * effect, mode=2)
     p_left = probabilities(theta_left, m, extra_logits=extra)
     p_right = probabilities(theta_right, m, extra_logits=-extra)

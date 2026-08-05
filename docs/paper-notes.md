@@ -49,14 +49,28 @@ so this table cannot drift from the code.
   the fundamental component, so it would not be a misspecification at all.
   The manuscript only reports this scenario for `m = 4, 5, 6`. Requesting it
   below `m = 4` raises rather than silently generating in-subspace data.
-* **At `m = 4` the higher-mode scenario is still an exact orbit in the full
-  simplex.** Mode 2 at `m = 4` is the sign representation, which flips under a
-  one-step shift, so the antisymmetric placement described in Section 8.2
-  leaves `p_right = g p_left`. The scenario remains a valid misspecification
-  test — neither constrained family can represent the mode-2 component — but the
-  population gains of Models B and C coincide there. `m = 5` and `m = 6` break
-  the orbit relation as well. This is pinned by
-  `test_higher_mode_at_m4_is_still_an_exact_orbit_in_the_full_space`.
+* **The higher-mode change is the mode-2 flip alone.** Section 8.2 says a
+  mode-2 component "was added with opposite signs on the two sides of the
+  boundary". This implementation initially read that as *rotate the fundamental
+  coordinate and also add the mode*, which left the change carrying a
+  full-strength exact-orbit component. Model C then retained 51–56% of the
+  population gain and stayed competitive under "misspecification", flatly
+  contradicting Table 7.
+
+  Confining the change to the higher mode — both segments share one fundamental
+  coordinate, which only sets the operating point away from uniform —
+  reproduces Table 7's structure:
+
+  | | full | fundamental | shared orbit |
+  |---|---|---|---|
+  | population gain, `m = 6`, effect 0.25 | 0.01005 | 0.00030 | **-0.00768** |
+  | share of full gain | 100% | 3.0% | negative |
+
+  The fundamental family keeps a few percent of the signal and the shared-orbit
+  gain goes *negative* — aligned pooling is worse than not aligning — which is
+  what produces Table 7's below-nominal shared-orbit power of 0.044–0.082. The
+  worked example shows the same reversal at calibrated 5%. Pinned by
+  `test_higher_mode_reproduces_the_manuscript_misspecification_pattern`.
 * **The full detector is BIC-scored**, matching Section 7.1's production rerun.
   The exact KT/Dirichlet mixture code is not implemented; Section 14.3 lists
   exact universal codes for all three families as future work.
