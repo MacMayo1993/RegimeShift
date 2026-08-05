@@ -78,8 +78,8 @@ in an East-model inverse-gap asymptotic: the resemblance carries weight only if
 the dynamical occurrence is *not* likewise a units artefact.
 
 ```bash
-python -m regimeshift analyse --results results/v3/full_results.csv \
-                              --out results/v3-bits --units bits
+python -m regimeshift analyse --results results/v3-production/full_results.csv \
+                              --out results/v3-production-bits --units bits
 ```
 
 reports every slope column in bits alongside a `k_star_multiple` column.
@@ -197,12 +197,19 @@ python -m regimeshift run --grid quick --out results/quick --workers 4
 
 # the manuscript design: 312 configurations, 936 detector rows,
 # 468,000 simulated two-segment datasets, base seed 20260713
-python -m regimeshift run --grid production --out results/v3 --workers 16
+python -m regimeshift run --grid production --out results/v3-production --workers 16
 ```
+
+**One complete production run is committed** under
+[`results/v3-production/`](results/v3-production/), so the manuscript's numbers
+can be read and re-analysed without re-running the grid. It ships with a
+`run_manifest.json` recording the commit, environment, package versions, timing
+and a SHA-256 for every file; `tests/test_committed_results.py` verifies each
+file against its checksum, so a hand-edited CSV is detectable.
 
 Each configuration carries a deterministic, content-derived seed, so results do
 not depend on worker count or completion order, and runs resume from the
-checkpoint file. Six reports are written:
+checkpoint file. Six reports are written, plus the manifest:
 
 | File | Contents |
 |---|---|
@@ -345,6 +352,7 @@ regimeshift/
 examples/         worked_example.py -- one interpretable figure
 tests/            structural tests and statistical validation
 docs/             manuscript, reproduction notes, related work, figures
+results/          one committed production run, with provenance manifest
 ```
 
 ## Scope

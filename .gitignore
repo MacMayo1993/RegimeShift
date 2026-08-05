@@ -6,4 +6,8 @@ dist/
 .pytest_cache/
 .venv/
 venv/
-results/
+results/*
+!results/v3-production/
+
+# resumable run state, not a result
+results/v3-production/checkpoint.csv
