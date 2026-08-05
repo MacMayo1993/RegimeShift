@@ -39,7 +39,7 @@ __all__ = [
     "INDEPENDENT_ANGLE_RAD",
     "INDEPENDENT_M2_FACTOR",
     "HIGHER_MODE_FACTOR",
-    "RECONSTRUCTED_CONSTANTS",
+    "MANUSCRIPT_CONSTANTS",
     "Segments",
     "build_segments",
 ]
@@ -47,31 +47,33 @@ __all__ = [
 SCENARIOS = ("exact_orbit", "independent_fundamental", "higher_mode")
 
 #: Radius ratio of the right coordinate in the independent-fundamental scenario.
-INDEPENDENT_RADIUS_FACTOR = 0.85
+INDEPENDENT_RADIUS_FACTOR = 0.72
 #: Angular offset (radians) of the right coordinate, m >= 3.
 INDEPENDENT_ANGLE_RAD = 0.713
 #: Right/left coordinate ratio in the independent-fundamental scenario at m = 2.
-INDEPENDENT_M2_FACTOR = -0.6
+INDEPENDENT_M2_FACTOR = -0.55
 #: Amplitude of the higher mode, as a multiple of the effect size.
-HIGHER_MODE_FACTOR = 0.8
+HIGHER_MODE_FACTOR = 0.85
 
-#: Machine-readable provenance for every constant that had to be reconstructed
-#: because the source manuscript renders its equations as images.
+#: Machine-readable provenance for each scenario constant taken from the source
+#: manuscript: value, manuscript section, and how it was obtained.
 #:
-#: External review noted that exact numerical reproduction depends on these
-#: assumptions, and asked for them in text *or machine-readable form*. This is
-#: that form: value, manuscript section, whether the value was recoverable from
-#: the document, and the basis for the choice. A test asserts each entry matches
-#: the live module constant, so the table cannot drift from the code.
-RECONSTRUCTED_CONSTANTS = {
+#: All of these are now quoted directly from the document. An earlier version of
+#: this file guessed three of them, on the mistaken belief that the manuscript
+#: rendered its equations as images. It does not -- the equations are Office Math
+#: (OMML), and the first extraction pass simply dropped them by reading only
+#: ``w:t`` elements. See ``docs/paper-notes.md``.
+#:
+#: A test asserts each entry matches the live module constant, so the table
+#: cannot drift from the code.
+MANUSCRIPT_CONSTANTS = {
     "INDEPENDENT_RADIUS_FACTOR": {
         "value": INDEPENDENT_RADIUS_FACTOR,
         "section": "8.2",
-        "recovered_from_manuscript": False,
+        "recovered_from_manuscript": True,
         "basis": (
-            "Section 8.2 specifies a radius ratio 'rho times the left radius'; the "
-            "numeral was an image. Any ratio away from 1, combined with the angular "
-            "offset, breaks the orbit relation, which is what the scenario requires."
+            "Section 8.2: 'the right coordinate had radius 0.72 times the left radius "
+            "and angle 0.713 radians'."
         ),
     },
     "INDEPENDENT_ANGLE_RAD": {
@@ -83,27 +85,29 @@ RECONSTRUCTED_CONSTANTS = {
     "INDEPENDENT_M2_FACTOR": {
         "value": INDEPENDENT_M2_FACTOR,
         "section": "8.2",
-        "recovered_from_manuscript": False,
+        "recovered_from_manuscript": True,
         "basis": (
-            "Section 8.2 gives a scalar ratio for m = 2; the numeral was an image. "
-            "The sign matters: -1 would BE the exact orbit rather than violate it."
+            "Section 8.2: 'For g = 2, the right coordinate was -0.55 times the left "
+            "coordinate.' The sign matters: -1 would BE the exact orbit."
         ),
     },
     "HIGHER_MODE_FACTOR": {
         "value": HIGHER_MODE_FACTOR,
         "section": "8.2",
-        "recovered_from_manuscript": False,
-        "basis": "Section 8.2 gives 'amplitude rho times the effect'; the numeral was an image.",
+        "recovered_from_manuscript": True,
+        "basis": (
+            "Section 8.2: 'a mode-2 Fourier component with amplitude 0.85 times the "
+            "effect was added with opposite signs on the two sides of the boundary'."
+        ),
     },
     "LABEL_COST": {
         "value": "log(m - 1)",
-        "section": "7.3",
-        "recovered_from_manuscript": False,
+        "section": "3.3, 7.3",
+        "recovered_from_manuscript": True,
         "basis": (
-            "Section 7.3 states the alternative ranges over nonidentity shifts and that "
-            "m = 2 has a single one. log(m - 1) is the uniform code over that set and "
-            "gives the stated zero cost at m = 2. It is one legitimate two-part code, "
-            "not a uniquely determined MDL constant."
+            "Section 3.3: 'Under a uniform two-part label code, its cost is log(g - 1) "
+            "nats.' Section 7.3 confirms log 1 = 0 at g = 2. Still one legitimate "
+            "two-part code rather than a uniquely determined MDL constant."
         ),
     },
 }

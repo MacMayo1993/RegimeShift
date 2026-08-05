@@ -58,30 +58,30 @@
   <text class="tick" x="630.0" y="400" text-anchor="middle">400</text>
   <text class="tick" x="780.0" y="400" text-anchor="middle">3200</text>
   <text class="tick" x="630" y="420" text-anchor="middle">total length n (log scale)</text>
-  <polyline class="curve" style="stroke:#ef4444" points="480.0,349.1 530.0,309.6 580.0,289.3 630.0,213.6 680.0,104.8 730.0,60.0 780.0,60.0"/>
-  <circle cx="480.0" cy="349.1" r="3.2" fill="#ef4444"/>
-  <circle cx="530.0" cy="309.6" r="3.2" fill="#ef4444"/>
-  <circle cx="580.0" cy="289.3" r="3.2" fill="#ef4444"/>
-  <circle cx="630.0" cy="213.6" r="3.2" fill="#ef4444"/>
-  <circle cx="680.0" cy="104.8" r="3.2" fill="#ef4444"/>
+  <polyline class="curve" style="stroke:#ef4444" points="480.0,345.9 530.0,303.2 580.0,271.2 630.0,178.4 680.0,86.7 730.0,60.0 780.0,60.0"/>
+  <circle cx="480.0" cy="345.9" r="3.2" fill="#ef4444"/>
+  <circle cx="530.0" cy="303.2" r="3.2" fill="#ef4444"/>
+  <circle cx="580.0" cy="271.2" r="3.2" fill="#ef4444"/>
+  <circle cx="630.0" cy="178.4" r="3.2" fill="#ef4444"/>
+  <circle cx="680.0" cy="86.7" r="3.2" fill="#ef4444"/>
   <circle cx="730.0" cy="60.0" r="3.2" fill="#ef4444"/>
   <circle cx="780.0" cy="60.0" r="3.2" fill="#ef4444"/>
-  <polyline class="curve" style="stroke:#3b82f6" points="480.0,371.5 530.0,359.7 580.0,367.2 630.0,368.3 680.0,345.9 730.0,314.9 780.0,279.7"/>
+  <polyline class="curve" style="stroke:#3b82f6" points="480.0,371.5 530.0,359.7 580.0,362.9 630.0,369.3 680.0,359.7 730.0,348.0 780.0,297.9"/>
   <circle cx="480.0" cy="371.5" r="3.2" fill="#3b82f6"/>
   <circle cx="530.0" cy="359.7" r="3.2" fill="#3b82f6"/>
-  <circle cx="580.0" cy="367.2" r="3.2" fill="#3b82f6"/>
-  <circle cx="630.0" cy="368.3" r="3.2" fill="#3b82f6"/>
-  <circle cx="680.0" cy="345.9" r="3.2" fill="#3b82f6"/>
-  <circle cx="730.0" cy="314.9" r="3.2" fill="#3b82f6"/>
-  <circle cx="780.0" cy="279.7" r="3.2" fill="#3b82f6"/>
-  <polyline class="curve" style="stroke:#10b981" points="480.0,360.8 530.0,356.5 580.0,362.9 630.0,351.2 680.0,346.9 730.0,334.1 780.0,309.6"/>
-  <circle cx="480.0" cy="360.8" r="3.2" fill="#10b981"/>
-  <circle cx="530.0" cy="356.5" r="3.2" fill="#10b981"/>
+  <circle cx="580.0" cy="362.9" r="3.2" fill="#3b82f6"/>
+  <circle cx="630.0" cy="369.3" r="3.2" fill="#3b82f6"/>
+  <circle cx="680.0" cy="359.7" r="3.2" fill="#3b82f6"/>
+  <circle cx="730.0" cy="348.0" r="3.2" fill="#3b82f6"/>
+  <circle cx="780.0" cy="297.9" r="3.2" fill="#3b82f6"/>
+  <polyline class="curve" style="stroke:#10b981" points="480.0,362.9 530.0,355.5 580.0,362.9 630.0,364.0 680.0,343.7 730.0,328.8 780.0,301.1"/>
+  <circle cx="480.0" cy="362.9" r="3.2" fill="#10b981"/>
+  <circle cx="530.0" cy="355.5" r="3.2" fill="#10b981"/>
   <circle cx="580.0" cy="362.9" r="3.2" fill="#10b981"/>
-  <circle cx="630.0" cy="351.2" r="3.2" fill="#10b981"/>
-  <circle cx="680.0" cy="346.9" r="3.2" fill="#10b981"/>
-  <circle cx="730.0" cy="334.1" r="3.2" fill="#10b981"/>
-  <circle cx="780.0" cy="309.6" r="3.2" fill="#10b981"/>
+  <circle cx="630.0" cy="364.0" r="3.2" fill="#10b981"/>
+  <circle cx="680.0" cy="343.7" r="3.2" fill="#10b981"/>
+  <circle cx="730.0" cy="328.8" r="3.2" fill="#10b981"/>
+  <circle cx="780.0" cy="301.1" r="3.2" fill="#10b981"/>
   
 <line class="curve" style="stroke:#ef4444" x1="150" y1="452" x2="176" y2="452"/>  <text class="lgd" x="184" y="456">A. full</text>  <line class="curve" style="stroke:#3b82f6" x1="350" y1="452" x2="376" y2="452"/>  <text class="lgd" x="384" y="456">B. fundamental</text>  <line class="curve" style="stroke:#10b981" x1="550" y1="452" x2="576" y2="452"/>  <text class="lgd" x="584" y="456">C. shared orbit</text>
 </svg>

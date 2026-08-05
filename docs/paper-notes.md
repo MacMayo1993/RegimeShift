@@ -21,26 +21,42 @@ its own choices.
   Appendix A (cumulative-maximum stabilisation, then linear interpolation in
   log total length, with out-of-grid crossovers flagged and excluded).
 
-## Reconstructed, because the source rendered them as images
+## Constants taken from the manuscript
 
-The manuscript's displayed equations and several inline symbols are embedded
-images, so a handful of numeric constants could not be read out of the file.
-Where that happened this implementation makes an explicit, documented choice:
-
-| Quantity | Choice here | Basis |
+| Quantity | Value | Source |
 |---|---|---|
-| Model C label cost | `log(m - 1)` nats | Section 7.3 states the alternative ranges over nonidentity shifts and that `m = 2` has a single one; `log(m-1)` is the uniform code over that set and gives the stated zero cost at `m = 2`. |
-| Independent-fundamental radius ratio | `0.85` | Section 8.2 specifies "radius `rho` times the left radius"; the value was an image. Any ratio away from 1 with an angular offset breaks the orbit relation, which is what the scenario needs. |
-| Independent-fundamental angle | `0.713` rad | Stated in the text and readable. |
-| Independent-fundamental ratio at `m = 2` | `-0.6` | Section 8.2 gives a scalar ratio; the value was an image. The sign flip matters: `-1` would *be* the exact orbit. |
-| Higher-mode amplitude | `0.8 x` effect | Section 8.2 gives "amplitude `rho` times the effect"; value was an image. |
+| Model C label cost | `log(m - 1)` nats | §3.3: "Under a uniform two-part label code, its cost is log(g − 1) nats"; §7.3 confirms `log 1 = 0` at `g = 2`. |
+| Independent-fundamental radius ratio | `0.72` | §8.2 |
+| Independent-fundamental angle | `0.713` rad | §8.2 |
+| Independent-fundamental ratio at `m = 2` | `-0.55` | §8.2 |
+| Higher-mode amplitude | `0.85 x` effect | §8.2 |
 
-These constants live at the top of `regimeshift/scenarios.py` as named module
-constants so they can be changed in one place, and their provenance is also
-exported machine-readably as `regimeshift.RECONSTRUCTED_CONSTANTS` — value,
-manuscript section, whether the value was recoverable from the document, and
-the basis for the choice. A test asserts every entry matches the live constant,
-so this table cannot drift from the code.
+All five are quoted directly from the document, and their provenance is also
+exported machine-readably as `regimeshift.MANUSCRIPT_CONSTANTS`. A test asserts
+every entry matches the live module constant, so the table cannot drift.
+
+### A correction worth recording
+
+Earlier versions of this file claimed the manuscript "renders its equations as
+images", and three of these constants were *guessed* on that basis — `0.85`,
+`-0.6` and `0.8` in place of the true `0.72`, `-0.55` and `0.85`.
+
+That premise was wrong. The document contains no equation images at all: its 400
+displayed and inline expressions are Office Math (OMML), and the five embedded
+PNGs are Figures 1–5. The first extraction pass read only `w:t` elements, which
+silently drops every `m:t` inside an `<m:oMath>` node — so the equations
+vanished from the extracted text and their absence was misread as evidence they
+were pictures.
+
+The lesson generalises beyond this repository: an extractor that drops content
+silently is worse than one that fails, because the gap gets rationalised. The
+extraction now includes math inline, and `docs/extracted-text.md` says which
+parts of the document it covers.
+
+The formulas recovered alongside the constants all confirm the implementation
+that had been written without them — the known-split penalty
+`(d/2)[log L1 + log L2 − log(L1+L2)]`, its `(d/2) log(ρ(1−ρ))` split-fraction
+term, and the `log(g − 1)` label cost.
 
 ## Deliberate deviations
 

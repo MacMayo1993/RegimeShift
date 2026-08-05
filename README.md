@@ -5,8 +5,10 @@
 Shared-Orbit Models under Minimum Description Length* (Mac Mayo).
 
 The manuscript is in [`docs/`](docs/), together with
-[`docs/paper-notes.md`](docs/paper-notes.md), which records exactly which
-manuscript quantities this code reproduces and which had to be reconstructed.
+[`docs/paper-notes.md`](docs/paper-notes.md), which records exactly what this
+code reproduces, the deliberate deviations, and the corrections made along the
+way. [`docs/related-work.md`](docs/related-work.md) maps the adjacent
+literatures.
 
 ## The idea, before the equations
 
