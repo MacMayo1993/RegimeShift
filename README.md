@@ -4,7 +4,9 @@
 *Geometric Complexity in Cyclic Regime Changes: Full, Fundamental-Subspace, and
 Shared-Orbit Models under Minimum Description Length* (Mac Mayo).
 
-The manuscript is in [`docs/`](docs/), together with
+The current manuscript is
+[`docs/paper/geometric-complexity-v4.md`](docs/paper/geometric-complexity-v4.md)
+(v3.1 is kept alongside it for reference), together with
 [`docs/paper-notes.md`](docs/paper-notes.md), which records exactly what this
 code reproduces, the deliberate deviations, and the corrections made along the
 way. [`docs/related-work.md`](docs/related-work.md) maps the adjacent
