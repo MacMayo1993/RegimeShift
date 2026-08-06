@@ -394,6 +394,52 @@ code lengths agree to ~1e-12. Selecting between them reads floating-point noise.
 the less structured candidate, so a tie never becomes a claim of structure the
 data cannot support.
 
+## Block (codon-phase) families: separating group order from alphabet size
+
+Section 11. The direct model used everywhere else sets the group order equal to
+the alphabet size, so raising `m` simultaneously changes the number of candidate
+shifts, the simplex dimension, the category sparsity and the orbit spacing. Both
+external reviews named this confound. `regimeshift.blocks` separates them: `g`
+phase blocks, each carrying its own distribution over an alphabet of size `a`,
+with the group permuting the blocks and leaving the alphabet untouched.
+
+The dimension arithmetic reproduces Section 11 exactly for the codon case:
+
+| quantity | formula | `g = 3, a = 4` | manuscript |
+|---|---|---:|---:|
+| full | `g (a - 1)` | 9 | `d_full = 3(4-1) = 9` |
+| fundamental phase component | `dim V_fund` | 2 | `dim V_fund = 2` |
+| phase-fundamental | `dim V_fund (a - 1)` | 6 | `d_phase-fund = 2(4-1) = 6` |
+
+The geometry is the direct model's tensored with an `(a - 1)`-dimensional
+alphabet-contrast space. The group acts on the phase-mode index only, identically
+in every contrast direction — the rotation is `R ⊗ I` — which is why the
+dimensions multiply, and why a phase shift is exactly a coordinate rotation
+(asserted to 1e-13 for every geometry tested).
+
+**The separation, measured rather than asserted.** Under the null a regular
+`d`-dimensional split has `2 × gain ~ chi²_d`, so the mean raw gain is `d/2`.
+That reads the dimension off simulated data with no scenario machinery:
+
+| `g` | `a` | full: mean gain / `d_full/2` | fundamental: mean gain / `d_fund/2` |
+|---:|---:|---|---|
+| 3 | 4 | 4.535 / 4.5 | 3.050 / 3.0 |
+| 6 | 4 | 9.182 / 9.0 | **2.996 / 3.0** |
+| 3 | 8 | 10.569 / 10.5 | 7.033 / 7.0 |
+
+Holding the alphabet at 4 and doubling the group order from 3 to 6 doubles the
+full model's effective dimension while leaving the fundamental model's exactly
+where it was. In the direct model that comparison is impossible to make, because
+the two quantities are the same number.
+
+Note Section 11 reverses the manuscript's own notation — there `g` is the group
+order and `m` the alphabet size, the opposite of the direct model. This module
+uses `g` and `a` to keep them unmistakable.
+
+Not implemented for blocks: population gains, the Monte Carlo grid, and the
+approximate-orbit interpolation. The three detectors, the geometry and the
+frameshift recovery are covered by `tests/test_blocks.py`.
+
 ## Not implemented
 
 Scope limits carried over from Sections 11 and 13 of the manuscript:

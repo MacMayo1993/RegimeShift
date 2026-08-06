@@ -176,6 +176,35 @@ kept unchanged so the reproduction stays faithful. See
 [`docs/paper-notes.md`](docs/paper-notes.md), including the geometric reason a
 fixed radius ratio could never have held the distance constant.
 
+## Blocks: separating group order from alphabet size
+
+The direct model above sets the group order equal to the alphabet size, so
+raising `m` changes the number of candidate shifts, the simplex dimension, the
+category sparsity and the orbit spacing all at once. `regimeshift.blocks`
+separates them — `g` phase blocks over an alphabet of size `a`, with the group
+permuting blocks and leaving the alphabet alone. This is Section 11's
+codon-phase model: 3 reading frames, 4 nucleotides.
+
+```python
+from regimeshift import CODON, BlockGeometry, run_block_detectors
+
+CODON.full_dimension          # 9  = g(a-1) = 3 x 3
+CODON.fundamental_dimension   # 6  = dim(V_fund)(a-1) = 2 x 3
+```
+
+Under the null a regular `d`-dimensional split has `2 x gain ~ chi²_d`, so the
+mean raw gain is `d/2` — which reads the dimension straight off simulated data:
+
+| `g` | `a` | full (`d/2`) | fundamental (`d/2`) |
+|---:|---:|---|---|
+| 3 | 4 | 4.535 (4.5) | 3.050 (3.0) |
+| 6 | 4 | 9.182 (9.0) | **2.996 (3.0)** |
+| 3 | 8 | 10.569 (10.5) | 7.033 (7.0) |
+
+Doubling the group order at a fixed alphabet doubles what Model A pays and
+leaves Model B's cost unchanged. That comparison cannot be made in the direct
+model, where the two are the same number.
+
 ## How to describe this work
 
 The defensible claim, and the wording two rounds of external methodological
@@ -411,6 +440,7 @@ regimeshift/
   simulation.py   Monte Carlo engine, calibration, seeding (Section 8)
   analysis.py     score regressions and power crossovers (Section 8.3, App. B)
   selection.py    code lengths and model selection among the geometries
+  blocks.py       codon-phase families: group on phases, separate alphabet
   manifest.py     run provenance: commit, environment, checksums
   runner.py       deterministic parallel runner with checkpointing
   cli.py          python -m regimeshift
