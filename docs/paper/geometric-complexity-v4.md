@@ -41,10 +41,19 @@ detectors did not.
 Three extensions are new in this version. An **approximate-orbit** model
 interpolates between the subspace and shared-orbit hypotheses with a shrinkage
 code on the deviation, quantifying how far from exact symmetry a change can
-drift before the relational code stops paying. A **model-selection** procedure
-chooses the geometry from data rather than assuming it, on absolute code
-lengths. A **block family** separates group order from alphabet size, removing a
-confound present in the direct model.
+drift before the relational code stops paying; its deviation penalty uses the
+*profiled* information $L_1L_2/(L_1{+}L_2)$ remaining after the shared state is
+estimated, and on re-running with that correction we withdraw the earlier claim
+that this model wins outright over a wide band. A **model-selection** procedure
+chooses the geometry from data rather than assuming it, comparing total code
+lengths against a common reference under a stated BIC/Laplace convention. A
+**block family** separates group order from alphabet size, removing a confound
+present in the direct model.
+
+Throughout, the reported penalty coefficients should be read as finite-sample
+compatibility checks on a prescribed complexity law, not as an independent
+empirical determination of it, and the zero-increment result for the shared-orbit
+model is stated for regular orbit strata.
 
 **Keywords:** minimum description length; cyclic groups; changepoint models;
 representation theory; information geometry; categorical data; model selection;
@@ -125,9 +134,30 @@ to Watanabe (2009, 2013) and Drton and Plummer (2017).
 The contribution here is their combination: a known-boundary MDL comparison that
 separates *independent invariant-subspace change* from *shared-orbit
 transition*, and shows the latter introduces no new continuous parameter across
-the split. We are not aware of prior work making that distinction explicitly,
-but this is a search-based inference about absence rather than a proof of it,
-and the claim should be read accordingly.
+the split on a regular orbit stratum. We are not aware of prior work making that
+distinction explicitly, but this is a search-based inference about absence rather
+than a proof of it, and the claim should be read accordingly.
+
+The claim is deliberately narrow, and it is worth saying what is *not* claimed.
+Shared parameters across a changepoint, transformation alternatives, and
+group-invariant testing are all established. What we have not found elsewhere is
+the explicit four-way MDL separation of unrestricted change, independent
+representation-constrained change, shared finite-group-orbit change, and
+shrinkage toward such an orbit, together with the observation that the third of
+these carries no continuous-dimension increment at all while the second carries
+$d_{\mathrm{fund}}$.
+
+The relation to group-invariant e-testing deserves particular care, because it is
+the nearest neighbour. Pérez-Ortiz et al. (2024) show that among all e-statistics
+for testing between two group models, the likelihood ratio of the maximal
+invariant is growth-rate optimal, and that an anytime-valid test can be built on
+it. That is a different question from ours — theirs is a sequential testing
+problem with no coding component, ours a fixed-boundary description-length
+comparison across a hierarchy of alternatives — but the objects overlap: the
+maximal invariant of $C_g$ acting on the fundamental subspace is exactly what
+Model C conditions on. Their framework is the most promising route to a
+sequential version of this comparison, one that would not depend on a known
+boundary or on two-part boundary coding; Section 14.8 develops the point.
 
 ---
 
@@ -229,14 +259,32 @@ right segment is $T_r$ applied to it:
 $$ p_1 = p(\eta), \qquad p_2 = T_r\, p(\eta), \qquad r \in \{1,\dots,g-1\}. $$
 
 A simultaneous shift of both labels is observationally redundant, so the left
-label is fixed as a gauge. Therefore
+label is fixed as a gauge.
 
-$$ \Delta d_C = 0 . $$
+> **Proposition 1 (zero continuous increment on a regular stratum).** Assume
+>
+> 1. the group order $g$ is fixed and known, and the segment boundary is known;
+> 2. the shared state $\eta$ lies on a **regular orbit** — its stabiliser in
+>    $C_g$ is trivial, so the $g$ points $\{R^s\eta\}$ are distinct — and in
+>    particular $\eta \neq 0$;
+> 3. the chart of Section 5.3 is used, so the model is a regular exponential
+>    family in a neighbourhood of $\eta$ with non-singular Fisher information;
+> 4. the relative shift $r$ is encoded by the uniform two-part code over the
+>    $g-1$ nonidentity elements.
+>
+> Then Model C introduces no continuous parameter beyond the null, so
+> $$ \Delta d_C = 0, $$
+> and its total incremental cost over the null is $\log(g-1)$ nats, constant in
+> $L$.
 
-The alternative introduces only the discrete relative shift. Under a uniform
-two-part label code its cost is $\log(g-1)$ nats, which for fixed $g$ is constant
-in $L$. At $g=2$ there is a single nonidentity shift and the cost is $\log 1 = 0$
-— a fact with consequences developed in Section 9.6.
+Assumption 2 is the one that bites. At $\eta = 0$ the orbit collapses to a point,
+every $R^s$ acts trivially, and the parameter is a fixed point of the whole group;
+more generally at any $\eta$ with a nontrivial stabiliser the shift is not
+identifiable. At such points ordinary BIC dimension counting is not the correct
+marginal-likelihood theory at all, and the singular framework of Watanabe [7,8]
+and Drton–Plummer [9] applies instead. Section 6.3 develops this, and Section 9.6
+shows what it does to the $g = 2$ null in practice. At $g=2$ there is a single
+nonidentity shift and the label cost is $\log 1 = 0$.
 
 ## 3.4 Model D: approximate orbit
 
@@ -246,11 +294,44 @@ $$ \eta_2 \;=\; R_g^{\,r}\,\eta_1 + \delta, \qquad \delta \sim \mathcal{N}(0,\ta
 
 with a shrinkage code on $\delta$. Setting $\tau = 0$ pins $\delta$ out and
 recovers Model C *exactly*; letting $\tau \to \infty$ leaves $\delta$ free and
-recovers Model B's maximised gain. Under the Laplace approximation, and because
-the coordinates are Fisher-orthonormal so the right segment contributes
-information $L_2$ per unit in each direction, the deviation costs
+recovers Model B's maximised gain.
 
-$$ \mathrm{pen}_\delta \;=\; \frac{d_{\mathrm{fund}}}{2}\,\log\!\big(1 + L_2\tau^2\big) \ \text{nats}. $$
+The cost of $\delta$ follows from the Laplace approximation, but the shared state
+$\eta_1$ must be handled with care: it is *estimated jointly with* $\delta$, not
+known, and the two are correlated, because shifting $\eta_1$ and compensating
+with $\delta$ leaves the right segment's fit unchanged. In Fisher-orthonormal
+coordinates the joint information in $(\eta_1, \delta)$ is, per direction,
+
+$$ H \;=\; \begin{pmatrix} L_1 + L_2 & L_2 \\ L_2 & L_2 \end{pmatrix}, $$
+
+so what constrains $\delta$ after $\eta_1$ is profiled away is not $L_2$ but the
+Schur complement
+
+$$ J_{\mathrm{eff}} \;=\; L_2 - \frac{L_2^{\,2}}{L_1 + L_2} \;=\; \frac{L_1 L_2}{L_1 + L_2}, $$
+
+giving
+
+$$ \mathrm{pen}_\delta \;=\; \frac{d_{\mathrm{fund}}}{2}\,\log\!\Big(1 + \tau^2\,\frac{L_1 L_2}{L_1 + L_2}\Big) \ \text{nats}. $$
+
+Version 3.1 used $L_2$ in place of $J_{\mathrm{eff}}$ here. That would be correct
+only if the shared state were known, or if the left segment were infinitely
+informative; on a balanced split it uses $L/2$ where joint estimation gives
+$L/4$, inflating the penalty by up to $\tfrac{d_{\mathrm{fund}}}{2}\log 2$. The
+error is bounded, so the leading coefficient is unaffected — but Model D's entire
+claimed contribution *is* the bounded term, so the correction changes its
+conclusions materially. Section 11 reports the re-run and withdraws a claim that
+did not survive it.
+
+More generally, away from the Fisher reference point the identity-information
+approximation fails and the correct expression is
+
+$$ \tfrac12 \log\det\!\big(I + \tau^2 J_{\mathrm{eff}}\big), $$
+
+with $J_{\mathrm{eff}}$ the Schur complement of the observed information. Fisher
+orthonormality holds *at* $\eta = 0$; it does not make the metric globally the
+identity. The isotropic formula above is the reduction of this at the reference
+point, and it is what the implementation uses; the discrepancy is $O(\|\eta\|^2)$
+and is a limitation recorded in Section 13.
 
 **A caveat belongs with this.** For any *fixed* $\tau > 0$ the leading
 coefficient is $d_{\mathrm{fund}}/2$ — Model B's rate, not an intermediate one.
@@ -266,7 +347,7 @@ would require $\tau$ shrinking with $L$.
 | A. Full independent | arbitrary separate parameters | $g-1$ | $\tfrac{g-1}{2}\log L$ |
 | B. Independent fundamental | separate parameters in $V_{\mathrm{fund}}$ | $d_{\mathrm{fund}}$ | $\tfrac{d_{\mathrm{fund}}}{2}\log L$ |
 | C. Shared exact orbit | one shared state plus relative $r$ | $0$ | $\log(g-1)$, constant in $L$ |
-| D. Approximate orbit | one shared state, shrunk deviation | $d_{\mathrm{fund}}$ (fixed $\tau$) | $\log(g-1) + \tfrac{d_{\mathrm{fund}}}{2}\log(1+L_2\tau^2)$ |
+| D. Approximate orbit | one shared state, shrunk deviation | $d_{\mathrm{fund}}$ (fixed $\tau$) | $\log(g-1) + \tfrac{d_{\mathrm{fund}}}{2}\log\big(1+\tau^2 L_1L_2/(L_1{+}L_2)\big)$ |
 
 ---
 
@@ -279,10 +360,10 @@ Laplace marginal likelihood and standard parametric-complexity expansions share
 the leading form $\tfrac{d}{2}\log L + O(1)$, where the $O(1)$ term depends on
 the coding convention, prior, Fisher information and parameter-space geometry.
 
-## 4.2 Exact split increment
+## 4.2 BIC/Laplace split increment
 
-For a known split, the incremental regular complexity produced by replacing one
-$d$-dimensional fit with two is
+For a known split, the incremental complexity produced by replacing one
+$d$-dimensional fit with two is, under the BIC/Laplace expansion of Section 4.1,
 
 $$ \mathrm{pen}_{\mathrm{split}}(d; L_1, L_2) \;=\; \frac{d}{2}\Big[\log L_1 + \log L_2 - \log (L_1+L_2)\Big] . $$
 
@@ -291,7 +372,9 @@ When $L_1/L \to \rho$,
 $$ \mathrm{pen}_{\mathrm{split}} \;=\; \frac{d}{2}\log L \;+\; \frac{d}{2}\log\big[\rho(1-\rho)\big] \;+\; O(1). $$
 
 Thus the coefficient of $\log L$ is $d/2$, while the split fraction affects only
-the bounded term. Section 9.7 verifies this prediction empirically — the first
+the bounded term. The expression is *algebraically* exact within that
+approximation; it is not an exact universal codelength, and the name is chosen to
+say so. Section 9.7 verifies this prediction empirically — the first
 time it has been checked in this programme.
 
 ## 4.3 Unknown boundaries
@@ -309,15 +392,24 @@ Writing
 
 $$ K^\ast \;=\; \frac{1}{2\ln 2} \;=\; 0.7213475\ldots $$
 
-for the per-dimension penalty rate in bits per e-fold, **every leading
-coefficient in this framework is an integer multiple of $K^\ast$**: Model A pays
+for the per-dimension penalty rate in bits per e-fold, **on regular strata and
+under the BIC/Laplace coding convention of Section 10, every leading coefficient
+in this framework is an integer multiple of $K^\ast$**: Model A pays
 $(g-1)K^\ast$, Model B pays $d_{\mathrm{fund}}K^\ast$, and Model C pays zero. The
 hierarchy is a counting statement — how many $K^\ast$ a model spends to cross the
 boundary.
 
 $K^\ast$ is *definitional*, not empirical: it is Schwarz's one-half expressed in
 base 2, and any quantity counting half a parameter per e-fold in bits produces
-it. Section 13 returns to this.
+it. Appendix D returns to this.
+
+The integer-multiple statement is likewise conditional, and the qualification is
+not cosmetic. It holds because regular BIC counts an integer number of parameters
+and charges each one half a $\log L$. Under singular learning theory the leading
+coefficient is a real log canonical threshold, which need not be a half-integer
+and so need not be an integer multiple of $K^\ast$ at all — and orbit collapse
+(Proposition 1, assumption 2) is exactly a singularity of this kind. The counting
+picture describes the regular part of this problem, not all of it.
 
 ---
 
@@ -405,7 +497,7 @@ finite-sample residual length dependence.
 A BIC-scored unrestricted multinomial detector, so that all detectors are
 comparable through maximised likelihood plus explicit complexity increments. The
 penalty is the exact known-split increment with $d = g-1$. An exact
-KT/Dirichlet mixture implementation is *not* used; see Section 15.3.
+KT/Dirichlet mixture implementation is *not* used; see Section 14.3.
 
 ## 7.2 Fundamental detector
 
@@ -426,7 +518,16 @@ continuous-dimension increment.
 
 For each nonidentity shift, $(\eta,\delta)$ are fitted jointly by maximising the
 penalised likelihood $\ell_1(\eta) + \ell_2(R^r\eta + \delta) - \|\delta\|^2/2\tau^2$
-with analytic gradients. The penalty is $\log(g-1) + \mathrm{pen}_\delta$.
+with analytic gradients. The penalty is $\log(g-1) + \mathrm{pen}_\delta$, with
+$\mathrm{pen}_\delta$ the profiled-information expression of Section 3.4. That
+the joint fit estimates $\eta$ rather than conditioning on it is precisely why
+the penalty must use $L_1L_2/(L_1+L_2)$ and not $L_2$: the code and the penalty
+have to describe the same procedure.
+
+`tests/test_approximate_orbit.py` grounds the closed form against brute-force
+numerical marginalisation of the joint likelihood under the Gaussian code. At
+$g=2$, $\tau = 0.15$ the two agree to within 0.003 nats at the Fisher reference
+point, where the superseded formula is off by 0.27.
 
 ## 7.5 Numerical notes
 
@@ -512,6 +613,22 @@ empirical penalty slope is minus the $\log L$ coefficient; its expected value is
 $\Delta d/2$. Each group-level regression uses 24 design points (four effects by
 six lengths), and because those aggregate means have unequal Monte Carlo
 precision, both ordinary and variance-weighted fits are reported.
+
+> **What this analysis can and cannot establish.** The detector score is
+> constructed as $T_M = \widehat{G}_M - \mathrm{pen}_M$ with the proposed penalty
+> *inserted*. Regressing the mean score on $L\,G_M$ and $\log L$ will therefore
+> tend to return the inserted coefficient unless the maximised-likelihood bias
+> itself carries substantial $\log L$ dependence. This is a finite-sample
+> compatibility check on the implementation, **not an independent empirical
+> discovery of the complexity law.** The decomposition in Appendix B makes the
+> point exactly: the fitted slope is $\Delta d/2 - s$, where $s$ is the
+> gain-residual slope, so the regression measures $s$ and nothing else. What the
+> results below establish is that $s$ is small — that finite-sample corrections
+> do not materially obscure the prescribed regular coefficient over the tested
+> range. An independent validation would compare a fully specified universal code
+> — normalised maximum likelihood, a prequential code, or a Bayesian marginal
+> likelihood with a stated prior — against the BIC approximation. That is not
+> done here.
 
 **Calibrated power analysis.** At every configuration an additive critical value
 is set to the empirical 95th percentile of 1,000 null scores, and power is
@@ -604,26 +721,52 @@ continuous-dimension penalty. This settles a question left open in v3.1.
 **Table 6.** Median calibrated 50%-power crossover-length ratios, exact-orbit
 data. A ratio below one favours the numerator.
 
+Intervals are 95% bootstrap percentile intervals over 500 replications of the
+whole pipeline — power draw, monotone stabilisation, interpolation and median
+across effects.
+
 | $g$ | shared / full | shared / fundamental | fundamental / full |
 |---:|---:|---:|---:|
-| 2 | 0.758 | 0.758 | 1.000 |
-| 3 | 0.788 | 0.788 | 1.000 |
-| 4 | 0.687 | 0.842 | 0.819 |
-| 5 | 0.630 | 0.838 | 0.745 |
-| 6 | 0.608 | 0.852 | 0.708 |
+| 2 | 0.758 [0.695, 0.814] | 0.758 [0.701, 0.821] | 1.000 [0.916, 1.098] |
+| 3 | 0.788 [0.725, 0.856] | 0.788 [0.725, 0.853] | 1.000 [0.926, 1.094] |
+| 4 | 0.687 [0.646, 0.764] | 0.842 [0.782, 0.911] | 0.819 [0.758, 0.909] |
+| 5 | 0.630 [0.560, 0.726] | 0.838 [0.772, 0.903] | 0.745 [0.687, 0.826] |
+| 6 | 0.608 [0.560, 0.647] | 0.852 [0.787, 0.896] | 0.708 [0.656, 0.772] |
 
 For exact-orbit data the shared detector required approximately 31%, 37% and 39%
-fewer observations than the full detector for $g = 4,5,6$, and 15–16% fewer than
-the fundamental detector. At $g = 2$ and $g = 3$ the fundamental/full ratio is
-exactly 1.000, as it must be when the two models coincide.
+fewer observations than the full detector for $g = 4,5,6$. Stated with the
+uncertainty rather than as point estimates, the reduction against the full
+detector is 24–35% at $g=4$, 27–44% at $g=5$ and 35–44% at $g=6$; against the
+fundamental detector it is 9–22%, 10–23% and 10–21%. The shared-vs-fundamental
+intervals exclude one at every $g \geq 4$, so that advantage is not a
+resampling artefact; the fundamental-vs-full intervals include one at $g = 2, 3$,
+as they must when the two models coincide.
 
-Bootstrap intervals for these ratios are computed by resampling the whole
-pipeline — power draw, monotone stabilisation, interpolation and median across
-effects. Two limits are stated rather than hidden: the resampling covers binomial
-power noise but not the variability of the empirical 95th-percentile critical
-value, and detectors are resampled independently although they score the same
-datasets and are positively correlated, which makes the ratio intervals
-conservative.
+**Three caveats on these intervals**, stated rather than hidden.
+
+*Critical values are held fixed.* The resampling covers binomial power noise but
+not the variability of the empirical 95th-percentile critical value, which is
+re-estimated from 1,000 null draws at every configuration and carries its own
+error. The intervals are therefore too narrow in that respect.
+
+*Detectors are resampled independently* although they score the same datasets and
+are positively correlated. For a *ratio* of two positively correlated quantities
+this cuts the other way and makes the intervals conservative. Doing it properly
+requires the per-dataset detector outcomes, which the summary grid does not
+retain; a joint bootstrap is the natural next revision of this analysis.
+
+*A substantial minority of crossovers fall outside the grid.* Of 156 (group,
+effect, detector) crossover estimates, 112 are interior, 25 lie above the longest
+simulated length and 19 below the shortest. Only interior estimates enter the
+medians. The excluded cases are not missing at random — they concentrate in the
+weakest effects (below grid) and in the constrained detectors at large $g$ under
+strong effects (above grid) — so the medians describe the interior of the design,
+not the whole of it.
+
+The cumulative-maximum stabilisation of the power curves is defensible, since
+true power is monotone in length, but it is one choice among several; isotonic
+regression or a fitted parametric power curve would be a useful sensitivity
+check, and is not performed here.
 
 ## 9.5 Misspecification
 
@@ -749,13 +892,43 @@ verified to $10^{-9}$. Selecting the shortest code over six candidates — the t
 nulls and the four alternatives — answers whether a change occurred and what kind
 in a single step.
 
-At $g = 6$, effect 0.25:
+**The convention, stated.** "Description length" here is not a complete universal
+code, and calling these lengths *absolute* would overstate what is implemented.
+Each $L(M)$ is the BIC/Laplace expression
+
+$$ L(M) \;=\; -\hat\ell_M \;+\; \tfrac{d_M}{2}\log L \;+\; c_M, $$
+
+with the structural constants $c_M$ that the models do not share: $\log(g-1)$ for
+the relative shift in Models C and D, and $\mathrm{pen}_\delta$ for D. What it
+omits is the $O(1)$ terms common to a fully specified code — the Fisher-volume
+(Jeffreys) term $\log\int\sqrt{\det I(\theta)}\,d\theta$, the parameter-space
+truncation, and the coding convention for $L$ itself.
+
+Those omissions are not innocuous here, and we flag rather than hide the
+consequence. Model C's incremental cost is *already* $O(1)$, and Model D is
+separated from B and C purely in bounded terms, so an omitted constant of a nat
+or two is the same size as the effects Section 11 measures. Comparisons between
+A and B, whose separation grows like $\tfrac{g-1-d_{\mathrm{fund}}}{2}\log L$,
+are safe from this; comparisons among C and D at fixed $L$ are not, and the
+margins reported below should be read as provisional on the convention. A version
+of this procedure with genuinely absolute lengths would need normalised maximum
+likelihood, an explicit prequential code, or Bayesian marginal likelihoods with
+stated priors. That is the single most valuable next step for Section 10 and is
+listed in Section 14.
+
+For this reason Section 11 reports differences $L(\text{null}_{\mathrm{full}}) -
+L(M)$ against one fixed reference rather than raw lengths: the reference cancels,
+and what remains is comparable under the stated convention even though the
+individual lengths are not absolute.
+
+At $g = 6$, effect 0.25, 200 trials per cell, seed 20260713
+(`scripts/regenerate_selection_tables.py`):
 
 | generated from | 200/side | 800/side | 3,200/side |
 |---|---:|---:|---:|
-| exact orbit → recovers shared orbit | 66% | 90% | 94% |
-| higher mode → recovers full | 1% | 25% | 100% |
-| no change → false-change rate | 4.5% | 0% | 0% |
+| exact orbit → recovers shared orbit | 58% | 77% | 90% |
+| higher mode → recovers full | 1% | 21% | 100% |
+| no change → false-change rate | 4% | 2% | 0% |
 
 The procedure also reports the **margin** over the runner-up. A small margin means
 the data does not distinguish the geometries — information the oracle comparison
@@ -774,26 +947,66 @@ structure the data cannot support.
 
 Model D answers the question Model C's all-or-nothing hypothesis cannot. Sweeping
 the true deviation from an exact orbit at $g = 6$, effect 0.25, 1,200 observations
-per side, with $\tau = 0.05$ (mean MDL score in nats, 250 trials):
+per side, with $\tau = 0.05$ (250 trials).
+
+Following Section 10, the table reports **description-length savings against one
+common reference**, $L(\text{null}_{\mathrm{full}}) - L(M)$ in nats, not detector
+scores. Every column is measured against the same no-change code, so the columns
+may legitimately be compared and the largest entry is the shortest total code.
 
 | deviation | A full | B fundamental | C exact orbit | D approximate | best |
 |---:|---:|---:|---:|---:|---|
-| 0.00 | 5.66 | 13.80 | **17.53** | 16.77 | C |
-| 0.25 | 13.49 | 21.72 | **24.47** | 24.29 | C |
-| 0.50 | 24.93 | 33.10 | 33.77 | **34.83** | D |
-| 0.75 | 38.08 | 46.39 | 46.13 | **47.73** | D |
-| 1.00 | 53.52 | 62.13 | 61.31 | **63.22** | D |
-| 1.50 | 89.13 | **98.55** | 90.98 | 96.74 | B |
-| 3.00 | 226.66 | **241.78** | 171.69 | 211.68 | B |
+| 0.00 | 5.54 | 23.78 | **27.55** | 27.24 | C |
+| 0.25 | 6.12 | 24.54 | 26.15 | **27.12** | D |
+| 0.50 | 15.88 | 34.26 | 32.29 | **35.34** | D |
+| 0.75 | 24.61 | **42.78** | 34.27 | 41.06 | B |
+| 1.00 | 40.14 | **58.38** | 38.64 | 51.64 | B |
+| 1.50 | 73.24 | **91.58** | 55.00 | 77.02 | B |
+| 3.00 | 190.98 | **209.11** | 80.72 | 147.29 | B |
 
-Three regimes. The rigid orbit code holds its edge out to a deviation of roughly
-a quarter of the effect size. Some relational code keeps winning out to about
-1.5. Beyond that the relation is not worth encoding. **Model D occupies a genuine
-middle band from roughly 0.5 to 1.0 where it beats both endpoints** — Model C is
-too rigid to fit the drift and Model B pays full dimension for it.
+Three regimes remain visible. The rigid orbit code wins at an exact orbit; some
+relational code wins out to a deviation of about half the effect size; beyond
+that the relation is not worth encoding and the unconstrained subspace model
+takes over. The relational advantage degrades *gradually* rather than at a
+cliff, which is the qualitative point.
 
-The relational advantage therefore degrades *gradually* rather than at a cliff,
-which is what makes an approximate-orbit code worth having.
+**How large is Model D's band, really?** Comparing means across a table row
+understates the uncertainty, because the four models are evaluated on the same
+datasets. The paired difference $\min_{A,B,C} L - L_D$ per dataset, in nats:
+
+| deviation | mean paired advantage | s.e. | datasets where D is shortest |
+|---:|---:|---:|---:|
+| 0.00 | $-0.31$ | 0.04 | 23% |
+| 0.25 | $+0.28$ | 0.06 | 58% |
+| 0.50 | $-0.18$ | 0.12 | 51% |
+| 0.75 | $-2.55$ | 0.37 | 43% |
+| 1.00 | $-7.38$ | 0.79 | 34% |
+
+Read honestly, this is a much weaker claim than a "middle band" suggests. Model
+D's advantage is statistically distinguishable from zero at only one sweep point,
+$0.25$, and there it is worth about a quarter of a nat — a rounding error next to
+the tens of nats separating the model classes. At $0.50$ the mean advantage is
+not distinguishable from zero, and D is shortest on barely half the datasets.
+
+We therefore *withdraw* the claim made in the first draft of this section — that
+Model D occupies a band from roughly $0.5$ to $1.0$ where it strictly beats both
+endpoints. (Model D is new in this version; version 3.1 posed the model in its
+Section 14.1 but reported no sweep, so the claim was never in the published
+record.) That
+claim was an artifact of two errors corrected here: comparing detector scores
+measured against different nulls (Section 10), and an effective-information error
+in the deviation penalty (Section 3.4) that inflated Model D's cost and, through
+the resulting mis-ranking, moved the apparent band. What survives is narrower and
+worth stating plainly:
+
+> A shrinkage code on the deviation is never much worse than the better of the
+> two endpoints, and is slightly better in a narrow neighbourhood of a nearly
+> exact orbit. Its value is as a robust default when the analyst does not know
+> whether the orbit is exact, not as a model that wins outright over a wide
+> range.
+
+Whether that band widens under a $\tau$ chosen by the data, rather than fixed at
+$0.05$, is open; see Section 14.
 
 ---
 
@@ -862,36 +1075,7 @@ has not been performed.**
 
 ---
 
-# 13. Relation to the broader geometric framework
-
-The broader programme distinguishes three conceptual levels. *Topology*: a flat
-bundle can carry nontrivial global holonomy despite vanishing local curvature.
-*Dynamics*: a twisted or constrained generator can exhibit a spectral response to
-the global sector. *Information*: a statistical observer faces model-dependent
-description lengths determined by parameter dimension, invariant subspaces and
-shared group relations.
-
-**The present paper establishes a result only at the third level.** It does not
-prove that topological holonomy, dynamical spectral gaps and MDL coefficients are
-numerically identical.
-
-A motivating numerical coincidence remains: the East model contains an
-inverse-gap asymptotic involving $1/(2\ln 2)$, while a one-dimensional regular BIC
-increment has coefficient $K^\ast = 1/(2\ln 2)$ when expressed in bits per $\ln L$.
-
-This resemblance should be treated with more caution than it has been.
-**$K^\ast$ arising as the per-dimension BIC rate in bits is definitional, not a
-discovery** — it is Schwarz's one-half expressed in base 2, and any quantity that
-counts half a parameter per e-fold and reports in bits produces it. The
-resemblance therefore carries weight only if the dynamical occurrence is *not*
-likewise a units artefact — that is, only if $1/(2\ln 2)$ enters the East-model
-asymptotic from the structure of the constrained generator rather than from a
-choice of base. Settling that is the first question any bridge between the levels
-must answer, and it is sharper than asking whether the numbers agree.
-
----
-
-# 14. Limitations
+# 13. Limitations
 
 1. **Independent categorical observations.** Markov, hidden-state and
    continuous-observation extensions may change both the population gain and the
@@ -899,25 +1083,43 @@ must answer, and it is sharper than asking whether the numbers agree.
 2. **Known boundary.** A scanning or online procedure requires multiplicity
    correction, a stopping rule, false-alarm control over time and detection-delay
    analysis. This is *not* a changepoint-discovery method.
-3. **Regular approximations, not exact codes.** All penalties are BIC-style
+3. **Regular approximations, not exact codes.** All penalties are BIC/Laplace
    known-split increments. KT/Dirichlet mixtures and normalised maximum
    likelihood are not implemented, so no claim of exact codelength optimality is
-   made.
-4. **Singularity at orbit collapse.** The two-part code establishes the absence
+   made. In particular the cross-model lengths of Section 10 omit the
+   model-dependent $O(1)$ terms of a complete code, which is the same order as
+   the effects Section 11 reports.
+4. **Identity-information approximation in Model D.** The deviation penalty uses
+   the isotropic reduction $\tfrac{d_{\mathrm{fund}}}{2}\log(1 + \tau^2 J_{\mathrm{eff}})$
+   rather than $\tfrac12\log\det(I + \tau^2 J_{\mathrm{eff}})$ with the observed
+   information. Fisher orthonormality holds at $\eta = 0$ only, so the two differ
+   at $O(\|\eta\|^2)$. Measured against brute-force marginalisation at $g=2$,
+   $\tau = 0.15$, the isotropic form is within 0.003 nats at $\eta = 0$ and
+   about 0.03 nats out at $\|\eta\| = 0.3$; the observed-information form is
+   within 0.002 nats at both. Since Model D's conclusions live in bounded terms
+   of order a quarter of a nat, this is not negligible.
+5. **Singularity at orbit collapse.** The two-part code establishes the absence
    of an added continuous vector but does not derive the exact singular
    marginal-likelihood expansion.
-5. **Configuration-specific calibration.** Critical values are estimated
+6. **Configuration-specific calibration.** Critical values are estimated
    separately for every configuration, which is appropriate for practical power
    comparison but means calibrated crossover curves must not be used to infer the
    raw MDL coefficient.
-6. **A simulation study.** Every result comes from synthetic data generated by
-   the models under test. No real dataset is analysed, and the cyclic-orbit
-   assumption has not been validated empirically on one.
-7. **Narrow exploration.** One fundamental Fourier mode and one higher-mode
+7. **A simulation study, and this is the largest gap.** Every result comes from
+   synthetic data generated by the models under test. No real dataset is
+   analysed, and the cyclic-orbit assumption has not been validated empirically
+   on one. The selection procedure of Section 10 has therefore never been shown
+   to produce interpretable margins outside its own simulator, which is the
+   condition under which its output would mean anything to a practitioner. A
+   controlled categorical phase dataset would suffice — it need not be the
+   frameshift application of Section 12.4 — and would do more for the argument
+   than any further simulation. We regard this as the necessary next step rather
+   than as future work.
+8. **Narrow exploration.** One fundamental Fourier mode and one higher-mode
    misspecification. Non-Abelian groups, representation multiplicities,
    stabilizers and approximate orbit relations beyond the single interpolation of
    Section 11 remain open.
-8. **Narrow novelty claim.** Symmetry reduction, MDL dimension penalties and
+9. **Narrow novelty claim.** Symmetry reduction, MDL dimension penalties and
    constrained changepoint models are established individually. The contribution
    is their explicit organisation into full independent, independent
    invariant-subspace, shared exact-orbit and approximate-orbit hypotheses,
@@ -925,34 +1127,60 @@ must answer, and it is sharper than asking whether the numbers agree.
 
 ---
 
-# 15. Extensions
+# 14. Extensions
 
-**15.1 Stabilizer-adaptive labels.** If $\eta$ is invariant under a nontrivial
+**14.1 Stabilizer-adaptive labels.** If $\eta$ is invariant under a nontrivial
 subgroup, the orbit contains fewer than $g$ distinct states and the effective
 label cost should depend on the stabilizer order. A stabilizer-adaptive code could
 improve finite-sample behaviour near symmetric strata.
 
-**15.2 Shrinking-effect asymptotics.** The present grid uses fixed effects. A
+**14.2 Shrinking-effect asymptotics.** The present grid uses fixed effects. A
 triangular array with $\epsilon_L = c/\sqrt{L}$ or $c\sqrt{\log L/L}$ answers a
 different question, and the shared-orbit residual is most naturally studied there.
 
-**15.3 Exact universal codes.** The unrestricted multinomial family admits the KT
+**14.3 Exact universal codes.** The unrestricted multinomial family admits the KT
 mixture. Comparable exact or numerically integrated universal codes for the
 fundamental and shared-orbit families would eliminate reliance on regular BIC
 constants and permit direct finite-sample regret comparisons.
 
-**15.4 Sequential extension.** An online extension would replace the fixed split
+**14.4 Sequential extension.** An online extension would replace the fixed split
 with a stopping time, raising average run length under the null, expected
 detection delay under each geometric alternative, and the cost of repeatedly
 searching over both boundary locations and relative group elements.
 
-**15.5 Singular analysis at orbit collapse.** Computing or bounding the relevant
+**14.5 Singular analysis at orbit collapse.** Computing or bounding the relevant
 real log canonical threshold would replace the qualified statement of Section 9.3
-with a theorem.
+with a theorem. The most direct route is a local analysis along
+$\eta_L = h/\sqrt{L}$, or a related triangular array, which interpolates between
+the regular orbit behaviour of Proposition 1 and the collapsed stratum, and would
+explain the $g = 2$ null behaviour of Section 9.6 rather than merely describing
+it.
+
+**14.6 A complete cross-model code.** Section 10's selection procedure is only as
+sound as its $O(1)$ convention. Replacing the BIC/Laplace lengths with normalised
+maximum likelihood where it is well defined, an explicit prequential code, or
+Bayesian marginal likelihoods under stated priors would make the cross-model
+comparison genuinely absolute and would put the Model C and Model D margins — the
+ones that live entirely in bounded terms — on a firm footing. This is the single
+highest-value extension for the selection results.
+
+**14.7 A data-chosen $\tau$.** Model D's prior width is fixed at $0.05$
+throughout. Estimating $\tau$ from the data, at the cost of encoding it, is the
+natural way to ask whether Model D's narrow advantage (Section 11) widens into
+something worth the extra model class.
+
+**14.8 Relation to group-invariant e-testing.** The e-statistics of
+Pérez-Ortiz et al. [18] ask a different question — anytime-valid testing between
+two group models, with the likelihood ratio of the maximal invariant as the
+growth-rate-optimal statistic. But that machinery is a plausible route to a
+sequential version of the present comparison (Extension 14.4) that does not rely
+on a known boundary or on two-part boundary coding at all, and the maximal
+invariant for $C_g$ acting on the fundamental subspace is exactly the object
+Model C conditions on. The connection is worth developing.
 
 ---
 
-# 16. Conclusion
+# 15. Conclusion
 
 Cyclic structure constrains a regime-change problem in two different ways. It can
 restrict each regime independently to a low-dimensional invariant subspace, or it
@@ -961,9 +1189,9 @@ boundary these produce different leading MDL structures — $\tfrac{g-1}{2}\log 
 $\tfrac{d_{\mathrm{fund}}}{2}\log L$, and a constant — with the last understood as
 a two-part structural code on a regular orbit stratum.
 
-The Monte Carlo results validate the full and independent-fundamental
-coefficients closely, and support a near-zero leading coefficient for the shared
-exact-orbit detector while revealing finite-sample residuals that an exact or
+The Monte Carlo results are consistent with the full and independent-fundamental
+coefficients to within 0.03, and with a near-zero leading coefficient for the
+shared exact-orbit detector, while revealing finite-sample residuals that an exact or
 singular coding analysis would be needed to explain. The decomposition
 $\text{slope} = \Delta d/2 - s$ localises those residuals in the likelihood gain
 rather than in any hidden penalty. Under matched geometry the constrained
@@ -993,6 +1221,7 @@ Implementation, tests and one complete production run are available at
 | Monte Carlo engine | `regimeshift/simulation.py`, `runner.py` |
 | Analysis | `regimeshift/analysis.py` |
 | Model selection | `regimeshift/selection.py` |
+| Sections 10 and 11 tables | `scripts/regenerate_selection_tables.py` |
 | Block families | `regimeshift/blocks.py` |
 | Run provenance | `regimeshift/manifest.py` |
 | Committed production run | `results/v3-production/` |
@@ -1087,8 +1316,8 @@ to equal the raw MDL coefficient.
 | Independent-fundamental scenario shown defective; corrected variant added | 9.8 |
 | Model D (approximate orbit) added | 3.4, 11 |
 | Model selection without an oracle added | 10 |
-| $K^\ast$ named; hierarchy restated as a counting statement | 4.4, 13 |
-| Caution added: $K^\ast$ is definitional, not a discovery | 13 |
+| $K^\ast$ named; hierarchy restated as a counting statement | 4.4, App. D |
+| Caution added: $K^\ast$ is definitional, not a discovery | App. D |
 | Block families implemented; dimension separation measured | 12 |
 | Penalty-slope decomposition $\Delta d/2 - s$ established | 9.3 |
 | Non-comparability of raw scores across models made explicit | 9.6 |
@@ -1096,4 +1325,51 @@ to equal the raw MDL coefficient.
 | Weighted regressions and bootstrap intervals reported | 8.3, 9.4 |
 | Optimiser convergence criterion corrected | 7.5 |
 | Related-work positioning added | 1.1 |
-| Scope narrowed: known-boundary comparison, simulation study | 1, 14 |
+| Scope narrowed: known-boundary comparison, simulation study | 1, 13 |
+
+**Changes made in response to peer review of the version-4 draft.**
+
+| Change | Section |
+|---|---|
+| **Model D penalty corrected** to the profiled information $L_1L_2/(L_1{+}L_2)$; §11 re-run | 3.4, 11 |
+| **Model D's "middle band" claim withdrawn** — paired advantage is $+0.28 \pm 0.06$ nats at one sweep point and indistinguishable from zero elsewhere | 11 |
+| §11 restated on a **common reference**, resolving its conflict with §10 | 10, 11 |
+| BIC/Laplace **codelength convention stated explicitly**; "absolute code lengths" withdrawn | 10 |
+| Slope regressions **reframed as compatibility checks**, not independent validation | 8.3, 15 |
+| Model C's zero increment stated as **Proposition 1** with explicit assumptions | 3.3 |
+| $K^\ast$ integer-multiple claim **qualified to regular strata** | 4.4 |
+| "Exact split increment" renamed **BIC/Laplace split increment** | 4.2 |
+| Crossover **confidence intervals reported**, not merely mentioned | 9.4 |
+| **Out-of-grid crossover counts reported** (44 of 156 excluded) | 9.4 |
+| Speculative geometric bridge **moved out of the main argument** | App. D |
+| Extensions added: complete cross-model code, data-chosen $\tau$, local $h/\sqrt{L}$ analysis, e-testing link | 14.5–14.8 |
+| Limitation added: identity-information approximation in Model D, with measured size | 13 |
+
+---
+
+# Appendix D. Relation to the broader geometric framework
+
+The broader programme distinguishes three conceptual levels. *Topology*: a flat
+bundle can carry nontrivial global holonomy despite vanishing local curvature.
+*Dynamics*: a twisted or constrained generator can exhibit a spectral response to
+the global sector. *Information*: a statistical observer faces model-dependent
+description lengths determined by parameter dimension, invariant subspaces and
+shared group relations.
+
+**The present paper establishes a result only at the third level.** It does not
+prove that topological holonomy, dynamical spectral gaps and MDL coefficients are
+numerically identical.
+
+A motivating numerical coincidence remains: the East model contains an
+inverse-gap asymptotic involving $1/(2\ln 2)$, while a one-dimensional regular BIC
+increment has coefficient $K^\ast = 1/(2\ln 2)$ when expressed in bits per $\ln L$.
+
+This resemblance should be treated with more caution than it has been.
+**$K^\ast$ arising as the per-dimension BIC rate in bits is definitional, not a
+discovery** — it is Schwarz's one-half expressed in base 2, and any quantity that
+counts half a parameter per e-fold and reports in bits produces it. The
+resemblance therefore carries weight only if the dynamical occurrence is *not*
+likewise a units artefact — that is, only if $1/(2\ln 2)$ enters the East-model
+asymptotic from the structure of the constrained generator rather than from a
+choice of base. Settling that is the first question any bridge between the levels
+must answer, and it is sharper than asking whether the numbers agree.

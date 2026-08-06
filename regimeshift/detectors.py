@@ -81,14 +81,22 @@ increment has leading term ``(d/2) log n``. Converting to bits gives
 
     (d/2) log2(n)  =  d / (2 ln 2) * ln n  =  d * K_STAR * ln n
 
-so every leading coefficient in the framework is an integer multiple of
-``K_STAR``: ``(m - 1)`` of them for Model A, ``d_fund`` for Model B, and *zero*
-for Model C. The three-way hierarchy is how many ``K_STAR`` a model pays to
-cross the boundary.
+so on regular strata every leading coefficient in the framework is an integer
+multiple of ``K_STAR``: ``(m - 1)`` of them for Model A, ``d_fund`` for Model B,
+and *zero* for Model C. The three-way hierarchy is how many ``K_STAR`` a model
+pays to cross the boundary.
 
-Note that this constant is definitional, not a discovery -- it is just the
+The "integer multiple" part is conditional, and the condition is not decorative.
+It holds because regular BIC counts a whole number of parameters and charges
+half a ``log n`` for each. Under singular learning theory the leading
+coefficient is a real log canonical threshold, which need not be a half-integer
+at all -- and orbit collapse (``eta = 0``, or any state with a nontrivial
+stabiliser) is exactly such a singularity. The counting picture describes the
+regular part of the problem.
+
+Note also that this constant is definitional, not a discovery -- it is just the
 nats-to-bits conversion of Schwarz's one-half. Anything counting half a
-parameter per e-fold in base 2 produces it. Section 12 of the manuscript notes
+parameter per e-fold in base 2 produces it. Appendix D of the manuscript notes
 that the same number appears in an East-model inverse-gap asymptotic and is
 careful to call the resemblance suggestive rather than explanatory; the
 resemblance carries weight only if the dynamical occurrence is *not* similarly
@@ -261,6 +269,18 @@ def shared_orbit_detector(counts_left: np.ndarray, counts_right: np.ndarray, m: 
     alternative takes the shift with the largest shared-state likelihood. The
     penalty is the constant label cost -- no location cost and no
     continuous-dimension increment.
+
+    **The zero increment is a regular-stratum statement.** It requires the shared
+    state to lie on a *regular orbit*, i.e. to have trivial stabiliser in the
+    cyclic group, so that the ``m`` points ``{R^s eta}`` are distinct and the
+    relative shift is identifiable. At ``eta = 0`` the orbit collapses to a
+    point, every shift acts trivially, and ordinary BIC dimension counting is
+    not the right marginal-likelihood theory there at all -- the singular
+    framework of Watanabe and of Drton and Plummer applies instead. The detector
+    still runs at such points; what changes is the interpretation of its
+    penalty. See Proposition 1 of the v4 manuscript for the assumptions stated
+    in full, and its Section 9.6 for what collapse does to the ``m = 2`` null in
+    practice.
     """
     cL = np.asarray(counts_left, dtype=float)
     cR = np.asarray(counts_right, dtype=float)
@@ -295,25 +315,53 @@ def run_all_detectors(counts_left: np.ndarray, counts_right: np.ndarray, m: int)
 # --------------------------------------------------------------------------
 
 
-def deviation_penalty(dim: int, n_right: int, deviation_scale: float) -> float:
+def deviation_penalty(
+    dim: int, n_left: int, n_right: int, deviation_scale: float
+) -> float:
     """Codelength for a shrunk deviation vector, in nats.
 
     Section 14.1 interpolates between Models B and C with
     ``eta_R = R^r eta_L + delta`` under "a shrinkage prior or code on delta".
-    Taking that code to be a Gaussian prior ``delta ~ N(0, tau^2 I_d)`` and
-    applying the Laplace approximation gives
+    Take that code to be a Gaussian prior ``delta ~ N(0, tau^2 I_d)`` and apply
+    the Laplace approximation. The shared state ``eta`` is *not* known: it is
+    estimated jointly with ``delta``, and the two are correlated, because moving
+    ``eta`` and compensating with ``delta`` leaves the right segment's fit
+    unchanged. In Fisher-orthonormal coordinates the joint information in
+    ``(eta, delta)`` is, per direction,
 
-        (d / 2) * log(1 + n_R * tau^2)
+        [[L1 + L2,  L2],
+         [     L2,  L2]]
 
-    because the coordinates are Fisher-orthonormal, so the right segment
-    contributes information ``n_R`` per unit in each direction.
+    so the information that actually constrains ``delta`` is the Schur
+    complement -- the *profile* information left after ``eta`` is optimised
+    away:
+
+        J_eff = L2 - L2^2 / (L1 + L2) = L1 * L2 / (L1 + L2),
+
+    the harmonic-style combination of the two segment lengths. The penalty is
+    therefore
+
+        (d / 2) * log(1 + tau^2 * L1 * L2 / (L1 + L2)).
+
+    Using ``L2`` alone here would be right only if the shared state were known,
+    or if the left segment were infinitely informative; on a balanced split it
+    overstates the effective information by a factor of two (``L/2`` against the
+    correct ``L/4``), which inflates the penalty by ``(d/2) log 2``. That is a
+    bounded error, so it leaves the leading coefficient alone -- but Model D's
+    whole contribution is the bounded term, so it is exactly the term that must
+    be right.
+
+    This is the isotropic reduction of the general correction
+    ``0.5 * logdet(I + tau^2 J_eff)``; it is exact under the local
+    identity-information approximation at the Fisher-orthonormal reference
+    point, and approximate away from it.
 
     The two limits are exactly the models being interpolated:
 
     * ``tau -> 0``  : cost 0, delta pinned at zero -- the exact orbit, Model C.
-    * ``tau -> inf``: cost ``(d/2) log(n_R tau^2)``, i.e. a leading ``(d/2) log n``
-      -- the independent-subspace rate of Model B. (The limit is improper; the
-      divergent ``d log tau`` is the price of an unbounded prior.)
+    * ``tau -> inf``: cost ``(d/2) log(tau^2 L1 L2 / (L1 + L2))``, i.e. a leading
+      ``(d/2) log n`` -- the independent-subspace rate of Model B. (The limit is
+      improper; the divergent ``d log tau`` is the price of an unbounded prior.)
 
     Note what this does *not* do. For any **fixed** ``tau > 0`` the leading
     coefficient is ``d/2`` -- Model B's, not something in between. The
@@ -324,11 +372,12 @@ def deviation_penalty(dim: int, n_right: int, deviation_scale: float) -> float:
     """
     if deviation_scale < 0:
         raise ValueError(f"deviation_scale must be >= 0, got {deviation_scale}")
-    if n_right <= 0:
-        raise ValueError("the right segment must be non-empty")
+    if n_left <= 0 or n_right <= 0:
+        raise ValueError("both segments must be non-empty")
     if deviation_scale == 0:
         return 0.0
-    return 0.5 * dim * float(np.log1p(n_right * deviation_scale**2))
+    effective = (n_left * n_right) / (n_left + n_right)
+    return 0.5 * dim * float(np.log1p(effective * deviation_scale**2))
 
 
 def _neg_joint_and_grad(params, counts_left, counts_right, B, rotation, tau2):
@@ -412,7 +461,9 @@ def approximate_orbit_detector(
     ll_alt, best_shift, _ = best
 
     dim = fundamental_dimension(m)
-    pen = label_cost(m) + deviation_penalty(dim, int(cR.sum()), deviation_scale)
+    pen = label_cost(m) + deviation_penalty(
+        dim, int(cL.sum()), int(cR.sum()), deviation_scale
+    )
     gain = ll_alt - ll_null
     # Asymptotically a fixed positive scale pays the full dimension; only at
     # exactly zero does the continuous increment vanish.

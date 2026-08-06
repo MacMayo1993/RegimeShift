@@ -99,25 +99,54 @@ eta_R = R^r eta_L + delta,     delta ~ N(0, tau^2 I)
 
 with `tau = 0` pinning the deviation out — recovering Model C **exactly**, not
 just asymptotically — and large `tau` leaving it free, recovering Model B's
-maximised gain. The deviation costs `(d/2)·log(1 + n_R·tau²)` nats.
+maximised gain. The deviation costs
 
-Sweeping the true deviation at `m = 6`, effect 0.25, n = 1200 per side (mean MDL
-score, 250 trials, `tau = 0.05`):
+    (d/2)·log(1 + tau²·n_L·n_R/(n_L + n_R)) nats,
+
+where the effective information is the Schur complement left after the *shared*
+state is profiled out — not `n_R`, which would be right only if that state were
+known. See `docs/paper-notes.md` for the correction this replaced.
+
+Sweeping the true deviation at `m = 6`, effect 0.25, n = 1200 per side
+(`tau = 0.05`, 250 trials, `scripts/regenerate_selection_tables.py`). Entries are
+description-length savings against one common reference, `L(null_full) − L(M)`,
+in nats — *not* detector scores, which are measured against different nulls and
+cannot be compared across model classes:
 
 | deviation | A full | B fundamental | C exact orbit | D approx orbit | best |
 |---:|---:|---:|---:|---:|---|
-| 0.00 | 5.66 | 13.80 | **17.53** | 16.77 | C |
-| 0.25 | 13.49 | 21.72 | **24.47** | 24.29 | C |
-| 0.50 | 24.93 | 33.10 | 33.77 | **34.83** | D |
-| 1.00 | 53.52 | 62.13 | 61.31 | **63.22** | D |
-| 1.50 | 89.13 | **98.55** | 90.98 | 96.74 | B |
-| 3.00 | 226.66 | **241.78** | 171.69 | 211.68 | B |
+| 0.00 | 5.54 | 23.78 | **27.55** | 27.24 | C |
+| 0.25 | 6.12 | 24.54 | 26.15 | **27.12** | D |
+| 0.50 | 15.88 | 34.26 | 32.29 | **35.34** | D |
+| 0.75 | 24.61 | **42.78** | 34.27 | 41.06 | B |
+| 1.00 | 40.14 | **58.38** | 38.64 | 51.64 | B |
+| 1.50 | 73.24 | **91.58** | 55.00 | 77.02 | B |
+| 3.00 | 190.98 | **209.11** | 80.72 | 147.29 | B |
 
-So the rigid orbit code holds its edge out to a deviation of roughly a quarter
-of the effect size; some relational code keeps winning out to about 1.5; past
-that the relation is not worth encoding. Model D occupies a genuine middle band
-rather than being a formality — around 0.5 to 1.0 it beats *both* endpoints,
-because C is too rigid to fit the drift and B pays full dimension for it.
+So the rigid orbit code wins at an exact orbit, some relational code keeps
+winning out to a deviation of about half the effect size, and past that the
+relation is not worth encoding.
+
+**How big is Model D's advantage, really?** Because all four models score the
+same datasets, the paired difference is the honest statistic:
+
+| deviation | mean paired advantage of D | s.e. | datasets where D is shortest |
+|---:|---:|---:|---:|
+| 0.00 | −0.31 | 0.04 | 23% |
+| 0.25 | **+0.28** | 0.06 | 58% |
+| 0.50 | −0.18 | 0.12 | 51% |
+| 0.75 | −2.55 | 0.37 | 43% |
+| 1.00 | −7.38 | 0.79 | 34% |
+
+An earlier version of this README claimed Model D "occupies a genuine middle
+band … around 0.5 to 1.0 it beats *both* endpoints". **That claim is withdrawn.**
+It was an artifact of comparing detector scores across different nulls and of the
+superseded penalty formula. Model D's advantage is distinguishable from zero at
+one sweep point only, and is worth about a quarter of a nat where the model
+classes are tens of nats apart. What survives: a shrinkage code is never much
+worse than the better endpoint and is slightly better near an exact orbit — a
+robust default when you do not know whether the orbit is exact, not a winner over
+a wide range.
 
 One honest caveat, stated in the code: for a **fixed** `tau > 0` the leading
 coefficient is `d/2` — Model B's rate, not something in between. The
@@ -135,7 +164,15 @@ null: Model A pools an unrestricted multinomial, Models B/C/D pool a fundamental
 coordinate. What is comparable is the total description length under each
 hypothesis, and the detector scores fall out of those as exact differences.
 Selecting the shortest code answers both questions at once, since the two nulls
-are candidates too:
+are candidates too.
+
+One caveat worth stating up front: these lengths are BIC/Laplace expressions,
+not complete universal codes. They carry the structural constants the models do
+not share — `log(g−1)` for the relative shift, the deviation penalty for Model D
+— but omit the `O(1)` terms of a fully specified code (Fisher volume, parameter
+truncation). Comparisons between A and B are safe from that, since their
+separation grows with `log n`; comparisons among C and D at fixed `n` live
+entirely in bounded terms and should be read as provisional on the convention.
 
 ```python
 from regimeshift import select_model
@@ -147,10 +184,16 @@ result.selected_shift    # 1
 result.margin            # nats over the runner-up
 ```
 
-At `m = 6`, effect 0.25: on exact-orbit data it recovers `shared_orbit` 66% /
-90% / 94% of the time at 200 / 800 / 3200 per side; on higher-mode data it
-reaches `full` 100% of the time by 3200; and with no change at all it picks a
-null, with a false-change rate of 4.5% at the shortest length and 0% beyond.
+At `m = 6`, effect 0.25 (200 trials, `scripts/regenerate_selection_tables.py`):
+on exact-orbit data it recovers `shared_orbit` 58% / 77% / 90% of the time at
+200 / 800 / 3200 per side; on higher-mode data it reaches `full` 100% of the time
+by 3200; and with no change at all it picks a null, with a false-change rate of
+4% at the shortest length falling to 0%.
+
+The exact-orbit figures are a *plurality*, not a failure rate: essentially all
+the remainder goes to `approximate_orbit`, which nests `shared_orbit`. The
+selector is never choosing an unrelated geometry — it is occasionally paying a
+little extra to allow a deviation that sampling noise made look real.
 
 ### What that turned up
 

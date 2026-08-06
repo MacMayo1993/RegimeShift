@@ -154,6 +154,16 @@ the structure of the constrained generator rather than from a choice of base.
 That is a sharper form of the manuscript's own caveat, and it is the question a
 bridge between the levels would have to answer first.
 
+**A second caution, added after peer review of the v4 draft.** The statement
+that every leading coefficient is an *integer multiple* of `K*` is conditional
+on regular strata. It holds because regular BIC counts a whole number of
+parameters and charges half a `log n` each. Under singular learning theory the
+leading coefficient is a real log canonical threshold, which need not be a
+half-integer and so need not be an integer multiple of `K*` at all — and orbit
+collapse is exactly such a singularity. The counting picture describes the
+regular part of this problem, not all of it. The v4 manuscript now says so in
+Section 4.4, and the `K_STAR` docstring carries the same qualification.
+
 ## Analysis-integrity work beyond the manuscript
 
 An external methodological review raised five concerns about the *analysis*
@@ -230,8 +240,39 @@ orbit a change can drift before the relational code stops paying.
 The manuscript gives the form `eta_R = R_g^r eta_L + delta` "with a shrinkage
 prior or code on `delta`" but does not fix the code. This implementation takes
 a Gaussian prior `delta ~ N(0, tau^2 I)`; the Laplace approximation then gives
-a deviation cost of `(d/2) log(1 + n_R tau^2)`, since the Fisher-orthonormal
+a deviation cost of
+
+    (d/2) log(1 + tau^2 * n_L * n_R / (n_L + n_R)).
+
+**A correction, made in response to peer review of the v4 draft.** The first
+implementation used `(d/2) log(1 + n_R tau^2)`, reasoning that Fisher-orthonormal
 coordinates make the right segment's information `n_R` per unit per direction.
+That is the information available *if the shared state is known*. It is not: the
+shared state is estimated jointly with `delta`, and the two are correlated,
+because shifting one and compensating with the other leaves the right segment's
+fit unchanged. The joint information per direction is
+
+    [[n_L + n_R, n_R],
+     [      n_R, n_R]]
+
+so what constrains `delta` is the Schur complement `n_L n_R / (n_L + n_R)`, not
+`n_R`. On a balanced split that is `n/4` where the old formula used `n/2`,
+overcharging by up to `(d/2) log 2`.
+
+The error is bounded, so it never touched a leading coefficient — but Model D's
+whole contribution is the bounded term, so it changed that model's conclusions.
+`tests/test_approximate_orbit.py` now grounds the formula against brute-force
+numerical marginalisation: at `m=2`, `tau=0.15`, the corrected form lands within
+0.003 nats of the exact marginal ratio at the Fisher reference point, where the
+superseded form is off by 0.27.
+
+Away from that reference point the identity-information approximation itself
+degrades: the correct expression is `0.5 * logdet(I + tau^2 J_eff)` with `J_eff`
+the Schur complement of the *observed* information. Measured at `||eta|| = 0.3`
+the isotropic closed form is about 0.03 nats out while the observed-information
+form is within 0.002. The implementation keeps the closed form, since the
+paper's asymptotic statements are made in those terms; the gap is recorded as a
+limitation and the upgrade is listed as an extension.
 
 Two properties make the nesting exact rather than approximate:
 
@@ -252,9 +293,20 @@ not do that.
 The `approximate_orbit` scenario supplies matching data, displacing the right
 state perpendicular to the rotated state so the deviation is a departure from
 the orbit rather than a rescaling along it. Sweeping it at `m = 6` shows three
-regimes: the rigid code wins out to a deviation of about 0.25 effects, Model D
-wins from roughly 0.5 to 1.0 by beating *both* endpoints, and beyond about 1.5
-the relation is not worth encoding at all. See the README table.
+regimes: the rigid code wins at an exact orbit, some relational code wins out to
+a deviation of about half the effect size, and beyond that the relation is not
+worth encoding at all.
+
+**A claim withdrawn.** Earlier notes said Model D "wins from roughly 0.5 to 1.0
+by beating *both* endpoints". That does not survive two corrections: the penalty
+fix above, and comparing models on a common reference rather than on detector
+scores measured against different nulls. Re-run
+(`scripts/regenerate_selection_tables.py`), the paired advantage of Model D over
+the best of A, B and C is `+0.28 +/- 0.06` nats at deviation 0.25 and
+indistinguishable from zero at 0.5, on a scale where the model classes are tens
+of nats apart. What is true is weaker and worth saying plainly: the shrinkage
+code is never much worse than the better endpoint and is slightly better near an
+exact orbit. It is a robust default, not a model that wins outright.
 
 Model D is deliberately **not** wired into `run_all_detectors` or the production
 grid, which reproduce the manuscript's three-model comparison. It is available
@@ -333,9 +385,15 @@ At `m = 6`, effect 0.25, 200 trials:
 
 | generated from | n/side | picks the generating family | false-change rate |
 |---|---:|---:|---:|
-| exact orbit | 200 / 800 / 3200 | 66% / 90% / 94% | — |
-| higher mode | 200 / 800 / 3200 | 1% / 25% / 100% | — |
-| no change | 200 / 800 / 3200 | — | 4.5% / 0% / 0% |
+| exact orbit | 200 / 800 / 3200 | 58% / 77% / 90% | — |
+| higher mode | 200 / 800 / 3200 | 1% / 21% / 100% | — |
+| no change | 200 / 800 / 3200 | — | 4% / 2% / 0% |
+
+Regenerate with `python scripts/regenerate_selection_tables.py`. These numbers
+moved slightly when Model D's penalty was corrected (below): a cheaper Model D
+takes a larger share of the exact-orbit picks, since it nests Model C. The
+remainder of the exact-orbit column goes almost entirely to `approximate_orbit`,
+not to an unrelated geometry.
 
 ### The defect
 
