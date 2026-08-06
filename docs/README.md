@@ -1,10 +1,23 @@
 # Documents
 
-* `Geometric_Complexity_Cyclic_Regime_Changes_v3_1.docx` — the manuscript,
-  version 3.1 (Mac Mayo, July 2026).
-* `paper-notes.md` — what the code reproduces exactly, which constants had to be
-  reconstructed because the source rendered them as images, and what is
-  deliberately out of scope.
+* `paper/geometric-complexity-v4.md` — **the current manuscript, version 4.0.**
+  Markdown with LaTeX math, so it is diffable and version-controlled. Render with
+  pandoc:
+
+  ```bash
+  pandoc docs/paper/geometric-complexity-v4.md -o paper-v4.docx
+  pandoc docs/paper/geometric-complexity-v4.md --pdf-engine=xelatex -o paper-v4.pdf
+  ```
+
+  Every number in it is taken from `results/v3-production/`, and Appendix C lists
+  what changed from v3.1 and why.
+* `Geometric_Complexity_Cyclic_Regime_Changes_v3_1.docx` — the previous
+  manuscript, version 3.1 (Mac Mayo, July 2026), kept for reference.
+* `paper-notes.md` — what the code reproduces exactly, the deliberate
+  deviations, the corrections made along the way, and what is out of scope.
+* `related-work.md` — a map of the adjacent literatures.
+* `extracted-text.md` — plain-text extraction of the v3.1 .docx, equations
+  included.
 
 The manuscript's "Code and data availability" section names the files of the
 original production run. This repository reorganises the same functionality:

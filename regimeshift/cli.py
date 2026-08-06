@@ -18,6 +18,7 @@ Re-analyse an existing results file::
 from __future__ import annotations
 
 import argparse
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -31,6 +32,7 @@ from .analysis import (
     crossover_ratio_summary,
     score_regression_summary,
 )
+from .manifest import write_manifest
 from .runner import PRODUCTION_GRID, QUICK_GRID, run_grid
 from .simulation import BASE_SEED, build_grid
 
@@ -118,11 +120,19 @@ def main(argv: list[str] | None = None) -> int:
           f"{3 * len(configs)} detector rows, {datasets:,} simulated datasets")
 
     checkpoint = args.checkpoint or (args.out / "checkpoint.csv")
+    started = time.monotonic()
     results = run_grid(
         configs, checkpoint=checkpoint, workers=args.workers,
         base_seed=args.base_seed, progress=not args.no_progress,
     )
+    elapsed = time.monotonic() - started
     _write_reports(results, args.out, n_boot=args.n_boot, units=args.units)
+    manifest = write_manifest(
+        args.out, grid=args.grid, spec=spec, base_seed=args.base_seed,
+        n_configs=len(configs), n_datasets=datasets, workers=args.workers,
+        elapsed_seconds=elapsed, units=args.units, n_boot=args.n_boot,
+    )
+    print(f"\nprovenance written to {manifest}")
     return 0
 
 

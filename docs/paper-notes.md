@@ -221,6 +221,225 @@ prediction the manuscript makes but never checked: rho shifts only the bounded
 term `(d/2) log(rho (1 - rho))`, leaving the `log n` coefficient at `d/2`. Both
 the closed-form and Monte Carlo versions are asserted.
 
+## Model D: the approximate-orbit model (Section 14.1)
+
+Implemented beyond the manuscript's production comparison, because Section 14.1
+poses a question the three-model study cannot answer: how far from an exact
+orbit a change can drift before the relational code stops paying.
+
+The manuscript gives the form `eta_R = R_g^r eta_L + delta` "with a shrinkage
+prior or code on `delta`" but does not fix the code. This implementation takes
+a Gaussian prior `delta ~ N(0, tau^2 I)`; the Laplace approximation then gives
+a deviation cost of `(d/2) log(1 + n_R tau^2)`, since the Fisher-orthonormal
+coordinates make the right segment's information `n_R` per unit per direction.
+
+Two properties make the nesting exact rather than approximate:
+
+* `tau = 0` pins `delta` out and maximises over the same nonidentity shifts, so
+  Model D **is** Model C — same gain, same penalty, same selected shift, to
+  1e-9. Asserted directly.
+* Large `tau` leaves `delta` free, and the maximised gain matches Model B's to
+  1e-4, since the alternative can then reach any pair of coordinates.
+
+**The caveat that belongs with it.** For any *fixed* `tau > 0` the leading
+coefficient is `d/2` — Model B's rate, not an intermediate one. The
+interpolation lives entirely in the bounded term, i.e. at finite `n`. That is
+not a defect for the question being asked, since tolerance to imperfect symmetry
+is a finite-sample question, but a genuine interpolation of the *leading*
+coefficient would require `tau` shrinking with `n`, and this implementation does
+not do that.
+
+The `approximate_orbit` scenario supplies matching data, displacing the right
+state perpendicular to the rotated state so the deviation is a departure from
+the orbit rather than a rescaling along it. Sweeping it at `m = 6` shows three
+regimes: the rigid code wins out to a deviation of about 0.25 effects, Model D
+wins from roughly 0.5 to 1.0 by beating *both* endpoints, and beyond about 1.5
+the relation is not worth encoding at all. See the README table.
+
+Model D is deliberately **not** wired into `run_all_detectors` or the production
+grid, which reproduce the manuscript's three-model comparison. It is available
+through the API and covered by `tests/test_approximate_orbit.py`.
+
+## The committed production run
+
+`results/v3-production/` holds one complete run of the Table 2 design — 312
+configurations, 936 detector rows, 468,000 datasets, base seed 20260713, 17.4
+minutes on 4 workers — with a `run_manifest.json` carrying the commit,
+environment and per-file checksums.
+
+Its numbers reproduce the manuscript's, and in most cells land closer to theory:
+
+| detector | m | this run | (WLS) | manuscript | predicted |
+|---|---:|---:|---:|---:|---:|
+| full | 4 | 1.488 | 1.504 | 1.515 | 1.5 |
+| full | 5 | **1.967** | 1.994 | *2.119* | 2.0 |
+| full | 6 | 2.488 | 2.518 | 2.468 | 2.5 |
+| fundamental | 2 | 0.522 | 0.474 | 0.457 | 0.5 |
+| fundamental | 3 | 0.996 | 0.979 | 1.047 | 1.0 |
+| fundamental | 4 | 0.971 | 0.961 | 1.001 | 1.0 |
+| fundamental | 5 | 0.964 | 0.988 | 1.019 | 1.0 |
+| fundamental | 6 | 1.036 | 1.017 | 0.967 | 1.0 |
+| shared orbit | 2 | -0.228 | -0.074 | -0.093 | 0 |
+| shared orbit | 3 | 0.041 | 0.090 | 0.144 | 0 |
+| shared orbit | 4 | 0.083 | 0.165 | 0.160 | 0 |
+| shared orbit | 5 | 0.139 | 0.142 | 0.127 | 0 |
+| shared orbit | 6 | 0.122 | 0.179 | 0.206 | 0 |
+
+**One result worth the manuscript's attention.** Section 9.1 singles out the
+`m = 5` full-model slope, which the manuscript reports as 2.119 — "exceeded 2.0
+by about 0.119, a finite-sample deviation of roughly two standard errors" — and
+discusses it as a real feature. This run gets **1.967** (WLS 1.994) at the same
+design and seed convention, i.e. right on 2.0, and the gain-residual slope there
+is 0.033, so the raw gain tracks `n G` with no drift to explain. The anomaly
+does not reproduce. Section 9.1 appears to be interpreting that run's Monte
+Carlo noise, and the sentence should probably go.
+
+The calibrated crossover ratios also track Table 6 closely at the group orders
+where the models differ — shared/full of 0.687, 0.630, 0.608 for `m = 4, 5, 6`
+against the manuscript's 0.705, 0.672, 0.610 — while coming out lower at
+`m = 2, 3` (0.758, 0.788 against 0.883, 0.943).
+
+Two caveats about the shipped files. The manifest records `dirty: true` because
+the run was launched with the results README uncommitted; the commit it names is
+the infrastructure commit, and no code differed. And the `higher_mode` rows of
+`crossover_ratio_summary.csv` are meaningless — under the corrected
+misspecification scenario the constrained detectors barely reach 50% power
+inside the grid, so only one effect yields an internal crossover and the ratios
+(18.95, 25.12, NaN) are dividing near-noise by near-noise. The `_n` columns show
+this; the exact-orbit and independent-fundamental rows are the usable ones.
+
+## Model selection, and a scenario defect it exposed
+
+Every efficiency number in the manuscript is an *oracle* number: the detector
+matching the generating geometry is chosen in advance. `regimeshift.selection`
+chooses it from the data instead.
+
+Selection cannot use the detector scores. A score is `gain - penalty` against
+*its own* null, and those nulls differ — Model A pools an unrestricted
+multinomial, Models B/C/D pool a fundamental coordinate — so the scores have
+different origins. `code_lengths` returns the total description length of the
+same data under each hypothesis, which is comparable, and the detector scores
+fall out exactly as differences (asserted to 1e-9):
+
+    score_A = L(null_full) - L(full)
+    score_B = L(null_fundamental) - L(fundamental)
+    score_C = L(null_fundamental) - L(shared_orbit)
+
+Selecting the shortest code answers both questions at once — whether a change
+occurred and what kind — and the six candidates include the two nulls, so no
+separate detection step is needed.
+
+At `m = 6`, effect 0.25, 200 trials:
+
+| generated from | n/side | picks the generating family | false-change rate |
+|---|---:|---:|---:|
+| exact orbit | 200 / 800 / 3200 | 66% / 90% / 94% | — |
+| higher mode | 200 / 800 / 3200 | 1% / 25% / 100% | — |
+| no change | 200 / 800 / 3200 | — | 4.5% / 0% / 0% |
+
+### The defect
+
+The `independent_fundamental` scenario selects `fundamental` almost never at
+`m = 6` — 3% — choosing `approximate_orbit` 93% of the time instead. That is
+the selector being right, not wrong.
+
+Section 8.2 fixes the angular offset at **0.713 rad** while the one-step
+rotation is `2 pi / m`, which *shrinks* as `m` grows. The scenario therefore
+slides toward being an orbit:
+
+| m | one-step rotation | distance from nearest orbit | selector picks |
+|---:|---:|---:|---|
+| 3 | 2.094 rad | 1.12 effects | `fundamental` 100% |
+| 4 | 1.571 rad | 0.76 effects | `fundamental` 91% |
+| 5 | 1.257 rad | 0.53 effects | `approximate_orbit` 73% |
+| 6 | 1.047 rad | 0.40 effects | `approximate_orbit` 93% |
+
+The crossover near 0.6 effects matches Model D's winning band independently
+measured in the README sweep.
+
+**Why this matters for the manuscript.** The scenario meant to represent "Model
+B territory" is not holding its distance from Model C's hypothesis constant
+across `m`. Any `m`-dependence in the independent-fundamental results — Table 6's
+row included — is therefore partly an artifact of the scenario drifting toward
+an orbit as `m` increases, not a property of the detectors. It also explains, and
+quantifies, the earlier observation that Model C stays competitive there at
+`m = 6`: the data is only 0.40 effects from its hypothesis.
+
+### The fix
+
+`independent_fundamental_fixed_distance` holds the orbit distance constant at
+`INDEPENDENT_ORBIT_DISTANCE = 1.5` effects for every `m`, and on it the selector
+recovers `fundamental` 100% of the time at `m = 3, 4, 5, 6` — the drift is gone.
+
+The construction places the right coordinate at the angular midpoint between
+adjacent orbit points, then solves the radius so the distance to the nearest is
+exactly the target. Its radius necessarily exceeds the left one, increasingly so
+with `m`, and that is forced rather than chosen: adjacent orbit points sit
+`2 sin(pi/m)` apart, so on a circle of the same radius no point can be more than
+`sin(pi/m)` from all of them — only 0.5 effects at `m = 6`. **Holding the
+distance constant therefore requires leaving that circle**, which is also why
+no choice of fixed radius ratio in the manuscript's parameterisation could have
+held it.
+
+The manuscript's `independent_fundamental` is kept unchanged so the reproduction
+stays faithful; the drift and the fix are both pinned by
+`tests/test_selection.py`.
+
+### A related degeneracy worth knowing
+
+At `m = 2` and `m = 3` the fundamental component *is* the whole nontrivial
+tangent space, so `full` and `fundamental` are the same hypothesis and their
+code lengths agree to ~1e-12. Selecting between them reads floating-point noise.
+`select_model` therefore reports ties in `Selection.tied` and breaks them toward
+the less structured candidate, so a tie never becomes a claim of structure the
+data cannot support.
+
+## Block (codon-phase) families: separating group order from alphabet size
+
+Section 11. The direct model used everywhere else sets the group order equal to
+the alphabet size, so raising `m` simultaneously changes the number of candidate
+shifts, the simplex dimension, the category sparsity and the orbit spacing. Both
+external reviews named this confound. `regimeshift.blocks` separates them: `g`
+phase blocks, each carrying its own distribution over an alphabet of size `a`,
+with the group permuting the blocks and leaving the alphabet untouched.
+
+The dimension arithmetic reproduces Section 11 exactly for the codon case:
+
+| quantity | formula | `g = 3, a = 4` | manuscript |
+|---|---|---:|---:|
+| full | `g (a - 1)` | 9 | `d_full = 3(4-1) = 9` |
+| fundamental phase component | `dim V_fund` | 2 | `dim V_fund = 2` |
+| phase-fundamental | `dim V_fund (a - 1)` | 6 | `d_phase-fund = 2(4-1) = 6` |
+
+The geometry is the direct model's tensored with an `(a - 1)`-dimensional
+alphabet-contrast space. The group acts on the phase-mode index only, identically
+in every contrast direction — the rotation is `R ⊗ I` — which is why the
+dimensions multiply, and why a phase shift is exactly a coordinate rotation
+(asserted to 1e-13 for every geometry tested).
+
+**The separation, measured rather than asserted.** Under the null a regular
+`d`-dimensional split has `2 × gain ~ chi²_d`, so the mean raw gain is `d/2`.
+That reads the dimension off simulated data with no scenario machinery:
+
+| `g` | `a` | full: mean gain / `d_full/2` | fundamental: mean gain / `d_fund/2` |
+|---:|---:|---|---|
+| 3 | 4 | 4.535 / 4.5 | 3.050 / 3.0 |
+| 6 | 4 | 9.182 / 9.0 | **2.996 / 3.0** |
+| 3 | 8 | 10.569 / 10.5 | 7.033 / 7.0 |
+
+Holding the alphabet at 4 and doubling the group order from 3 to 6 doubles the
+full model's effective dimension while leaving the fundamental model's exactly
+where it was. In the direct model that comparison is impossible to make, because
+the two quantities are the same number.
+
+Note Section 11 reverses the manuscript's own notation — there `g` is the group
+order and `m` the alphabet size, the opposite of the direct model. This module
+uses `g` and `a` to keep them unmistakable.
+
+Not implemented for blocks: population gains, the Monte Carlo grid, and the
+approximate-orbit interpolation. The three detectors, the geometry and the
+frameshift recovery are covered by `tests/test_blocks.py`.
+
 ## Not implemented
 
 Scope limits carried over from Sections 11 and 13 of the manuscript:

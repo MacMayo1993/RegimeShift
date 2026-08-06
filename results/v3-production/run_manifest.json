@@ -1,0 +1,83 @@
+{
+  "generated_utc": "2026-08-05T19:55:23+00:00",
+  "grid": "production",
+  "design": {
+    "groups": [
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "scenarios": [
+      "exact_orbit",
+      "independent_fundamental",
+      "higher_mode"
+    ],
+    "effects": [
+      0.08,
+      0.12,
+      0.18,
+      0.25
+    ],
+    "segment_lengths": [
+      100,
+      200,
+      400,
+      800,
+      1600,
+      3200
+    ],
+    "n_alt": 500,
+    "n_null": 1000
+  },
+  "base_seed": 20260713,
+  "configurations": 312,
+  "detector_rows": 936,
+  "simulated_datasets": 468000,
+  "workers": 4,
+  "elapsed_seconds": 1045.3,
+  "report_units": "nats",
+  "bootstrap_replicates": 500,
+  "git": {
+    "commit": "afd8f2da362bd11d68d33576e4e561931f276105",
+    "dirty": true
+  },
+  "environment": {
+    "regimeshift": "3.1.0",
+    "python": "3.11.15",
+    "platform": "Linux-6.18.5-fc-v18-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "packages": {
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "pandas": "3.0.5"
+    }
+  },
+  "files": {
+    "crossover_bootstrap.csv": {
+      "sha256": "5aa565f5df7e7b9c4aed0861527a19efcd0c3d7d326d9f2c5e1dbf646107fc3b",
+      "bytes": 14721
+    },
+    "crossover_estimates.csv": {
+      "sha256": "8fdc5b1259e01bea45eff158a398861bae972a829dc33c968f0f051017cc4079",
+      "bytes": 12284
+    },
+    "crossover_ratio_bootstrap.csv": {
+      "sha256": "6351c24c2cdd597e71ca8c7333105d69d02fc97b0800a903bffc2776eada0fbb",
+      "bytes": 2106
+    },
+    "crossover_ratio_summary.csv": {
+      "sha256": "fbbfdfc3749f0b1bb6ad703d0cfd3a918e02e646a180d069be3401384a54b92e",
+      "bytes": 1063
+    },
+    "full_results.csv": {
+      "sha256": "2ed4233bbd61c55c84653c635f9967682b4a03c7cebc5c2c83141e67eb410535",
+      "bytes": 202298
+    },
+    "score_regression_summary.csv": {
+      "sha256": "77fb69f96b54d18fa4423bd2627d678f2dbd2e1f531bfb907fb40358dac2355a",
+      "bytes": 3952
+    }
+  }
+}

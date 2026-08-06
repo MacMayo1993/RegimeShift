@@ -4,7 +4,9 @@
 *Geometric Complexity in Cyclic Regime Changes: Full, Fundamental-Subspace, and
 Shared-Orbit Models under Minimum Description Length* (Mac Mayo).
 
-The manuscript is in [`docs/`](docs/), together with
+The current manuscript is
+[`docs/paper/geometric-complexity-v4.md`](docs/paper/geometric-complexity-v4.md)
+(v3.1 is kept alongside it for reference), together with
 [`docs/paper-notes.md`](docs/paper-notes.md), which records exactly what this
 code reproduces, the deliberate deviations, and the corrections made along the
 way. [`docs/related-work.md`](docs/related-work.md) maps the adjacent
@@ -78,11 +80,132 @@ in an East-model inverse-gap asymptotic: the resemblance carries weight only if
 the dynamical occurrence is *not* likewise a units artefact.
 
 ```bash
-python -m regimeshift analyse --results results/v3/full_results.csv \
-                              --out results/v3-bits --units bits
+python -m regimeshift analyse --results results/v3-production/full_results.csv \
+                              --out results/v3-production-bits --units bits
 ```
 
 reports every slope column in bits alongside a `k_star_multiple` column.
+
+## Model D: approximate orbits (Section 14.1)
+
+Exact symmetry is a strong assumption, and treating it as all-or-nothing hides
+the question that matters in practice: *how far from an exact orbit can a change
+drift before the relational code stops paying?* Model D answers it by
+interpolating between Models C and B,
+
+```
+eta_R = R^r eta_L + delta,     delta ~ N(0, tau^2 I)
+```
+
+with `tau = 0` pinning the deviation out — recovering Model C **exactly**, not
+just asymptotically — and large `tau` leaving it free, recovering Model B's
+maximised gain. The deviation costs `(d/2)·log(1 + n_R·tau²)` nats.
+
+Sweeping the true deviation at `m = 6`, effect 0.25, n = 1200 per side (mean MDL
+score, 250 trials, `tau = 0.05`):
+
+| deviation | A full | B fundamental | C exact orbit | D approx orbit | best |
+|---:|---:|---:|---:|---:|---|
+| 0.00 | 5.66 | 13.80 | **17.53** | 16.77 | C |
+| 0.25 | 13.49 | 21.72 | **24.47** | 24.29 | C |
+| 0.50 | 24.93 | 33.10 | 33.77 | **34.83** | D |
+| 1.00 | 53.52 | 62.13 | 61.31 | **63.22** | D |
+| 1.50 | 89.13 | **98.55** | 90.98 | 96.74 | B |
+| 3.00 | 226.66 | **241.78** | 171.69 | 211.68 | B |
+
+So the rigid orbit code holds its edge out to a deviation of roughly a quarter
+of the effect size; some relational code keeps winning out to about 1.5; past
+that the relation is not worth encoding. Model D occupies a genuine middle band
+rather than being a formality — around 0.5 to 1.0 it beats *both* endpoints,
+because C is too rigid to fit the drift and B pays full dimension for it.
+
+One honest caveat, stated in the code: for a **fixed** `tau > 0` the leading
+coefficient is `d/2` — Model B's rate, not something in between. The
+interpolation lives in the bounded term, i.e. at finite `n`, which is exactly
+where the tolerance question lives. A genuine interpolation of the *leading*
+coefficient would need `tau` shrinking with `n`.
+
+## Choosing the geometry instead of assuming it
+
+Every efficiency number above is an *oracle* number — the matching detector is
+chosen in advance. `regimeshift.select_model` chooses from the data.
+
+It cannot compare detector scores, because each is measured against its own
+null: Model A pools an unrestricted multinomial, Models B/C/D pool a fundamental
+coordinate. What is comparable is the total description length under each
+hypothesis, and the detector scores fall out of those as exact differences.
+Selecting the shortest code answers both questions at once, since the two nulls
+are candidates too:
+
+```python
+from regimeshift import select_model
+
+result = select_model(left, right, m=6)
+result.selected          # 'shared_orbit'
+result.declared_change   # True
+result.selected_shift    # 1
+result.margin            # nats over the runner-up
+```
+
+At `m = 6`, effect 0.25: on exact-orbit data it recovers `shared_orbit` 66% /
+90% / 94% of the time at 200 / 800 / 3200 per side; on higher-mode data it
+reaches `full` 100% of the time by 3200; and with no change at all it picks a
+null, with a false-change rate of 4.5% at the shortest length and 0% beyond.
+
+### What that turned up
+
+On the manuscript's `independent_fundamental` scenario the selector picks
+`fundamental` only 3% of the time at `m = 6` — it picks `approximate_orbit`
+instead. That is the selector being right. Section 8.2 fixes the angular offset
+at 0.713 rad while the one-step rotation `2π/m` *shrinks* with `m`, so the
+scenario slides toward being an orbit:
+
+| m | distance from nearest orbit | selector picks |
+|---:|---:|---|
+| 3 | 1.12 effects | `fundamental` 100% |
+| 4 | 0.76 effects | `fundamental` 91% |
+| 5 | 0.53 effects | `approximate_orbit` 73% |
+| 6 | 0.40 effects | `approximate_orbit` 93% |
+
+So the scenario meant to represent Model B's territory does not hold its
+distance from Model C's hypothesis constant across `m`, and any `m`-dependence
+in results from it is confounded with that drift.
+
+The `independent_fundamental_fixed_distance` scenario fixes it, holding the
+orbit distance at 1.5 effects for every `m` — and on it the selector recovers
+`fundamental` 100% of the time at every group order. The manuscript's version is
+kept unchanged so the reproduction stays faithful. See
+[`docs/paper-notes.md`](docs/paper-notes.md), including the geometric reason a
+fixed radius ratio could never have held the distance constant.
+
+## Blocks: separating group order from alphabet size
+
+The direct model above sets the group order equal to the alphabet size, so
+raising `m` changes the number of candidate shifts, the simplex dimension, the
+category sparsity and the orbit spacing all at once. `regimeshift.blocks`
+separates them — `g` phase blocks over an alphabet of size `a`, with the group
+permuting blocks and leaving the alphabet alone. This is Section 11's
+codon-phase model: 3 reading frames, 4 nucleotides.
+
+```python
+from regimeshift import CODON, BlockGeometry, run_block_detectors
+
+CODON.full_dimension          # 9  = g(a-1) = 3 x 3
+CODON.fundamental_dimension   # 6  = dim(V_fund)(a-1) = 2 x 3
+```
+
+Under the null a regular `d`-dimensional split has `2 x gain ~ chi²_d`, so the
+mean raw gain is `d/2` — which reads the dimension straight off simulated data:
+
+| `g` | `a` | full (`d/2`) | fundamental (`d/2`) |
+|---:|---:|---|---|
+| 3 | 4 | 4.535 (4.5) | 3.050 (3.0) |
+| 6 | 4 | 9.182 (9.0) | **2.996 (3.0)** |
+| 3 | 8 | 10.569 (10.5) | 7.033 (7.0) |
+
+Doubling the group order at a fixed alphabet doubles what Model A pays and
+leaves Model B's cost unchanged. That comparison cannot be made in the direct
+model, where the two are the same number.
 
 ## How to describe this work
 
@@ -158,12 +281,19 @@ python -m regimeshift run --grid quick --out results/quick --workers 4
 
 # the manuscript design: 312 configurations, 936 detector rows,
 # 468,000 simulated two-segment datasets, base seed 20260713
-python -m regimeshift run --grid production --out results/v3 --workers 16
+python -m regimeshift run --grid production --out results/v3-production --workers 16
 ```
+
+**One complete production run is committed** under
+[`results/v3-production/`](results/v3-production/), so the manuscript's numbers
+can be read and re-analysed without re-running the grid. It ships with a
+`run_manifest.json` recording the commit, environment, package versions, timing
+and a SHA-256 for every file; `tests/test_committed_results.py` verifies each
+file against its checksum, so a hand-edited CSV is detectable.
 
 Each configuration carries a deterministic, content-derived seed, so results do
 not depend on worker count or completion order, and runs resume from the
-checkpoint file. Six reports are written:
+checkpoint file. Six reports are written, plus the manifest:
 
 | File | Contents |
 |---|---|
@@ -269,10 +399,20 @@ seeded.
 
 ## What the results show
 
+From the committed production run (468,000 datasets, `results/v3-production/`):
+
+| detector | m | penalty slope | predicted |
+|---|---:|---:|---:|
+| full | 4, 5, 6 | 1.488, 1.967, 2.488 | 1.5, 2.0, 2.5 |
+| fundamental | 2 | 0.522 | 0.5 |
+| fundamental | 3–6 | 0.996, 0.971, 0.964, 1.036 | 1.0 |
+| shared orbit | 2–6 | −0.228, 0.041, 0.083, 0.139, 0.122 | 0 |
+
 * The full and fundamental coefficients closely track their predicted
   dimensions — this is the clearest evidence that an independently fitted
   fundamental family obeys a different complexity law from the unrestricted
-  multinomial.
+  multinomial. Note the fundamental slope stays flat near 1.0 from `m = 3` to
+  `m = 6` while the full slope climbs from 1.5 to 2.5.
 * The shared-orbit detector has a **near-zero** leading logarithmic coefficient,
   not an exactly constant finite-sample score. Residual drift is expected from
   maximisation over nonidentity shifts, finite-sample MLE bias, and the singular
@@ -301,11 +441,15 @@ regimeshift/
   scenarios.py    the three data-generating scenarios (Section 8.2)
   simulation.py   Monte Carlo engine, calibration, seeding (Section 8)
   analysis.py     score regressions and power crossovers (Section 8.3, App. B)
+  selection.py    code lengths and model selection among the geometries
+  blocks.py       codon-phase families: group on phases, separate alphabet
+  manifest.py     run provenance: commit, environment, checksums
   runner.py       deterministic parallel runner with checkpointing
   cli.py          python -m regimeshift
 examples/         worked_example.py -- one interpretable figure
 tests/            structural tests and statistical validation
 docs/             manuscript, reproduction notes, related work, figures
+results/          one committed production run, with provenance manifest
 ```
 
 ## Scope

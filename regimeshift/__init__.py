@@ -34,8 +34,10 @@ from .fourier import (
     probabilities,
     rotation_matrix,
 )
+from .blocks import CODON, BlockGeometry, run_block_detectors
 from .gains import population_gains
 from .scenarios import MANUSCRIPT_CONSTANTS, Segments, build_segments
+from .selection import CANDIDATES, Selection, code_lengths, select_model
 from .simulation import BASE_SEED, Config, build_grid, run_config
 
 __version__ = "3.1.0"
@@ -45,7 +47,13 @@ __all__ = [
     "BASE_SEED",
     "Config",
     "DetectorResult",
+    "BlockGeometry",
+    "CANDIDATES",
+    "CODON",
     "MANUSCRIPT_CONSTANTS",
+    "Selection",
+    "code_lengths",
+    "select_model",
     "Segments",
     "build_grid",
     "build_segments",
@@ -64,6 +72,7 @@ __all__ = [
     "probabilities",
     "rotation_matrix",
     "run_all_detectors",
+    "run_block_detectors",
     "run_config",
     "score_regression",
     "score_regression_summary",

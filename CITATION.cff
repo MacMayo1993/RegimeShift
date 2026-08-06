@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+title: "RegimeShift: known-boundary MDL detectors for cyclic categorical regime changes"
+message: "If you use this software, please cite it using these metadata."
+type: software
+authors:
+  - family-names: Mayo
+    given-names: Mac
+repository-code: "https://github.com/MacMayo1993/RegimeShift"
+license: MIT
+version: 3.1.0
+abstract: >-
+  Reference implementation and test harness for a known-boundary minimum
+  description length comparison of categorical cyclic regime changes. It
+  distinguishes unrestricted independent change, independent change within the
+  fundamental invariant subspace, and shared-state exact-orbit transitions, and
+  adds an approximate-orbit model interpolating between the last two. The
+  shared-orbit alternative introduces no additional continuous parameter across
+  the boundary and therefore carries no leading log n continuous-dimension
+  penalty, paying only a discrete nonidentity-shift label cost. The advantage is
+  conditional on structural correctness and is evaluated under common null
+  calibration. This is a methodological simulation study; no real dataset is
+  analysed.
+keywords:
+  - minimum description length
+  - changepoint
+  - cyclic groups
+  - representation theory
+  - information geometry
+  - model selection
+references:
+  - type: article
+    title: >-
+      Geometric Complexity in Cyclic Regime Changes: Full,
+      Fundamental-Subspace, and Shared-Orbit Models under Minimum Description
+      Length
+    authors:
+      - family-names: Mayo
+        given-names: Mac
+    year: 2026
+    notes: "The manuscript this repository implements; included in docs/."
