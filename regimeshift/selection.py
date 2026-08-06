@@ -185,7 +185,7 @@ def code_lengths(
             -best
             + 0.5 * d_fund * np.log(n)
             + label_cost(m)
-            + deviation_penalty(d_fund, int(nR), deviation_scale)
+            + deviation_penalty(d_fund, int(nL), int(nR), deviation_scale)
         )
     return lengths
 

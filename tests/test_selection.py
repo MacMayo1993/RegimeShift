@@ -106,14 +106,29 @@ def test_empty_segments_are_rejected():
 
 
 @pytest.mark.parametrize("m", [4, 5, 6])
-def test_exact_orbit_data_selects_the_shared_orbit_model(m):
+def test_exact_orbit_data_selects_a_relational_model(m):
+    """On exact-orbit data the selector must never fall back to an unrelated
+    geometry, and the exact-orbit code must be the modal pick.
+
+    It is *not* required to win every time. Model D nests Model C, and with the
+    profiled-information deviation penalty of Section 3.4 the two codes are
+    close: sampling noise alone makes a small deviation look worth encoding on
+    roughly a fifth of datasets. That is the correct behaviour for two models
+    this similar, and the paired analysis behind Section 11 measures the same
+    split independently. An earlier version of this test demanded 30 of 40 for
+    ``shared_orbit``, which passed only because the superseded penalty formula
+    overcharged Model D.
+    """
     segments = build_segments(m, "exact_orbit", 0.25)
     rng = np.random.default_rng(m * 3)
     picks = collections.Counter(
         select_model(counts(segments.p_left, 1600, rng), counts(segments.p_right, 1600, rng), m).selected
-        for _ in range(40)
+        for _ in range(120)
     )
-    assert picks["shared_orbit"] >= 30, picks
+    relational = picks["shared_orbit"] + picks["approximate_orbit"]
+    assert relational == 120, picks
+    assert picks.most_common(1)[0][0] == "shared_orbit", picks
+    assert picks["shared_orbit"] >= 0.6 * 120, picks
     assert generating_family_for_scenario("exact_orbit") == "shared_orbit"
 
 
@@ -222,20 +237,47 @@ def test_selection_reports_a_margin_and_a_shift():
     assert result.code_lengths[result.selected] == min(result.code_lengths.values())
 
 
-def test_margin_is_small_when_the_geometries_are_hard_to_tell_apart():
-    """Short segments should not produce confident geometry claims. The margin
-    is the honest summary the oracle comparison cannot report."""
+def test_margin_over_a_structurally_different_geometry_grows_with_length():
+    """Short segments should not produce confident geometry claims.
+
+    The comparison has to be against a structurally *different* candidate. The
+    bare top-two margin does not grow with length, and should not be expected
+    to: on exact-orbit data the runner-up is essentially always the approximate
+    orbit, which nests the exact one, and the gap between a model and its own
+    relaxation stays bounded however much data arrives. That flatness is the
+    margin reporting something true. Confidence that the change is *relational
+    at all* is the quantity that should sharpen, so that is what is measured.
+    """
     segments = build_segments(6, "exact_orbit", 0.08)
+    relational = ("shared_orbit", "approximate_orbit")
+
+    def mean_structural_margin(n_side, trials=40):
+        rng = np.random.default_rng(4)
+        margins = []
+        for _ in range(trials):
+            left = counts(segments.p_left, n_side, rng)
+            right = counts(segments.p_right, n_side, rng)
+            lengths = code_lengths(left, right, 6)
+            chosen = select_model(left, right, 6)
+            rivals = [v for k, v in lengths.items() if k not in relational]
+            margins.append(min(rivals) - lengths[chosen.selected])
+        return float(np.mean(margins))
+
+    short = mean_structural_margin(120)
+    medium = mean_structural_margin(400)
+    long = mean_structural_margin(3200)
+    assert short < medium < long
+    assert long > 5 * short
+
+    # and the bare top-two margin really is the flat one, for the stated reason
     rng = np.random.default_rng(4)
-    short = np.mean([
-        select_model(counts(segments.p_left, 120, rng), counts(segments.p_right, 120, rng), 6).margin
-        for _ in range(25)
-    ])
-    long = np.mean([
-        select_model(counts(segments.p_left, 3200, rng), counts(segments.p_right, 3200, rng), 6).margin
-        for _ in range(25)
-    ])
-    assert short < long
+    runner_up = collections.Counter()
+    for _ in range(40):
+        left = counts(segments.p_left, 3200, rng)
+        right = counts(segments.p_right, 3200, rng)
+        ordered = sorted(code_lengths(left, right, 6).items(), key=lambda kv: kv[1])
+        runner_up[ordered[1][0]] += 1
+    assert sum(runner_up[k] for k in relational) >= 0.8 * 40, runner_up
 
 
 def test_declared_change_matches_the_alternative_set():

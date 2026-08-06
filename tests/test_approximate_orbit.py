@@ -47,18 +47,18 @@ def counts(p, n, rng):
 def test_deviation_penalty_vanishes_at_zero_scale():
     for dim in (1, 2):
         for n in (10, 1000, 10**6):
-            assert deviation_penalty(dim, n, 0.0) == 0.0
+            assert deviation_penalty(dim, n, n, 0.0) == 0.0
 
 
 @pytest.mark.parametrize("dim", [1, 2])
 def test_deviation_penalty_is_increasing_in_scale_and_length(dim):
     scales = [0.0, 0.01, 0.1, 1.0, 10.0]
-    values = [deviation_penalty(dim, 1000, s) for s in scales]
+    values = [deviation_penalty(dim, 1000, 1000, s) for s in scales]
     assert values == sorted(values)
     assert all(a < b for a, b in zip(values, values[1:]))
 
     lengths = [10, 100, 1000, 10_000]
-    by_length = [deviation_penalty(dim, n, 0.1) for n in lengths]
+    by_length = [deviation_penalty(dim, n, n, 0.1) for n in lengths]
     assert by_length == sorted(by_length)
 
 
@@ -69,16 +69,121 @@ def test_deviation_penalty_approaches_the_regular_rate_for_a_wide_prior(dim):
     term. This is the honest asymptotic statement and the tests should say so."""
     slopes = []
     for n in (10**5, 10**6, 10**7):
-        slopes.append(deviation_penalty(dim, n, 1.0))
+        slopes.append(deviation_penalty(dim, n, n, 1.0))
     increments = np.diff(slopes) / np.log(10)
     np.testing.assert_allclose(increments, dim / 2, rtol=1e-4)
 
 
 def test_deviation_penalty_rejects_invalid_arguments():
     with pytest.raises(ValueError):
-        deviation_penalty(2, 100, -0.1)
+        deviation_penalty(2, 100, 100, -0.1)
     with pytest.raises(ValueError):
-        deviation_penalty(2, 0, 0.1)
+        deviation_penalty(2, 100, 0, 0.1)
+
+
+@pytest.mark.parametrize("dim", [1, 2])
+def test_deviation_penalty_uses_the_profiled_information(dim):
+    """The shared state is estimated, not known, so the information that
+    constrains ``delta`` is the Schur complement ``L1 L2 / (L1 + L2)`` -- not
+    ``L2``. On a balanced split that halves the effective information, and the
+    gap to the known-shared-state value rises to ``(dim/2) log 2`` as the prior
+    stops doing the constraining."""
+    tau = 0.05
+    for half in (500, 5000, 50_000):
+        profiled = deviation_penalty(dim, half, half, tau)
+        np.testing.assert_allclose(
+            profiled, 0.5 * dim * np.log1p(0.5 * half * tau**2), rtol=1e-12
+        )
+        gap = 0.5 * dim * np.log1p(half * tau**2) - profiled
+        assert 0 < gap < 0.5 * dim * np.log(2)
+
+    # the gap approaches (dim/2) log 2 from below as half * tau^2 -> infinity
+    gaps = [
+        0.5 * dim * np.log1p(h * tau**2) - deviation_penalty(dim, h, h, tau)
+        for h in (10**5, 10**7, 10**9)
+    ]
+    assert gaps == sorted(gaps)
+    np.testing.assert_allclose(gaps[-1], 0.5 * dim * np.log(2), rtol=1e-6)
+
+
+def test_deviation_penalty_matches_brute_force_marginalisation():
+    """Ground the closed form against the thing it approximates.
+
+    Integrate the joint likelihood over ``(eta, delta)`` under the Gaussian code
+    on ``delta``, and over ``eta`` alone under the exact-orbit model, both by
+    quadrature. The penalty is exactly ``-log`` of the ratio of the two
+    marginals, normalised at each model's own maximum. At the Fisher reference
+    point the closed form should land within a few thousandths of a nat -- and
+    the version-3.1 formula, which used ``L2`` rather than the profiled
+    information, should be visibly outside that.
+    """
+    from scipy import integrate
+
+    from regimeshift.detectors import _rotation, fit_fundamental
+    from regimeshift.fourier import probabilities
+
+    m, tau = 2, 0.15
+    d = fundamental_dimension(m)
+    R = _rotation(m, 1)
+    theta_true = np.zeros(d)  # the Fisher-orthonormal reference point
+
+    def loglik(theta, c):
+        return float(c @ np.log(probabilities(theta, m)))
+
+    for n_left, n_right in [(200, 200), (400, 100)]:
+        rng = np.random.default_rng(4)
+        empirical = []
+        for _ in range(5):
+            cL = rng.multinomial(n_left, probabilities(theta_true, m)).astype(float)
+            cR = rng.multinomial(n_right, probabilities(R @ theta_true, m)).astype(float)
+            _, _, ll_pen = fit_approximate_orbit(cL, cR, m, 1, tau)
+            _, ll_orbit = fit_fundamental(cL + np.roll(cR, -1), m)
+
+            def joint(dl, et):
+                return np.exp(
+                    loglik(np.array([et]), cL)
+                    + loglik(R @ np.array([et]) + np.array([dl]), cR)
+                    - 0.5 * dl**2 / tau**2
+                    - 0.5 * np.log(2 * np.pi * tau**2)
+                    - ll_pen
+                )
+
+            def orbit(et):
+                return np.exp(
+                    loglik(np.array([et]), cL)
+                    + loglik(R @ np.array([et]), cR)
+                    - ll_orbit
+                )
+
+            v_d, _ = integrate.dblquad(joint, -6, 6, -6, 6, epsabs=1e-13, epsrel=1e-10)
+            v_c, _ = integrate.quad(orbit, -6, 6, epsabs=1e-13, epsrel=1e-10)
+            empirical.append(-np.log(v_d / v_c))
+
+        measured = float(np.mean(empirical))
+        assert measured == pytest.approx(
+            deviation_penalty(d, n_left, n_right, tau), abs=0.01
+        )
+        superseded = 0.5 * d * np.log1p(n_right * tau**2)
+        if n_left == n_right:  # where the two formulas differ most
+            assert abs(measured - superseded) > 0.2
+
+
+@pytest.mark.parametrize("dim", [1, 2])
+def test_deviation_penalty_is_symmetric_and_bounded_by_each_segment(dim):
+    """The profiled information is symmetric in the two segments -- neither one
+    alone identifies the deviation -- and a very long left segment recovers the
+    known-shared-state limit, where ``L2`` alone is correct after all."""
+    tau = 0.1
+    np.testing.assert_allclose(
+        deviation_penalty(dim, 300, 900, tau), deviation_penalty(dim, 900, 300, tau)
+    )
+    for n_left in (10**5, 10**7, 10**9):
+        assert deviation_penalty(dim, n_left, 400, tau) < 0.5 * dim * np.log1p(400 * tau**2)
+    np.testing.assert_allclose(
+        deviation_penalty(dim, 10**9, 400, tau),
+        0.5 * dim * np.log1p(400 * tau**2),
+        rtol=1e-5,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -184,7 +289,7 @@ def test_penalty_sits_between_the_two_models_it_interpolates(m):
     d = fundamental_dimension(m)
     c_penalty = label_cost(m)
     b_penalty = split_penalty(d, n, n)
-    d_penalty = label_cost(m) + deviation_penalty(d, n, 0.02)
+    d_penalty = label_cost(m) + deviation_penalty(d, n, n, 0.02)
     assert c_penalty < d_penalty < b_penalty + label_cost(m)
 
 
