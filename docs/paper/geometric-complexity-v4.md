@@ -156,7 +156,32 @@ $d_{\mathrm{full}}$. For a direct $g$-category multinomial model,
 $d_{\mathrm{full}} = g-1$. The notation is kept general because applications with
 several categorical blocks have larger dimensions; Section 12 develops that case.
 
-## 2.3 Cyclic group action
+## 2.3 Notation
+
+One symbol per quantity, throughout:
+
+| Symbol | Meaning |
+|---|---|
+| $g$ | **group order** — the order of the cyclic group $C_g$, and the number of phase blocks in a block family |
+| $a$ | **alphabet size** within one block. In the direct model of Sections 3–11 the group acts on the categories themselves, so $a = g$ |
+| $L$, $L_1$, $L_2$ | total and per-segment sample lengths; $\rho = L_1/L$ |
+| $d_{\mathrm{full}}$, $d_{\mathrm{fund}}$ | continuous dimensions of the full and fundamental families |
+| $\eta$ | fundamental-family coordinate; $\|\eta\|_2$ is a Fisher norm |
+| $r$ | relative group element (shift); $R_g$ its action on coordinates |
+| $\delta$, $\tau$ | Model D's deviation and its prior scale |
+
+This fixes two ambiguities carried by version 3.1. That version used $m$ for the
+alphabet size in its Section 11 while using $g$ for the group order everywhere
+else, so $m$ meant different things in different sections; here the alphabet is
+always $a$. And because the direct model sets $a = g$, statements about "raising
+$g$" in Sections 3–11 change the alphabet too — which is exactly the confound
+Section 12 removes.
+
+Readers moving between the paper and the reference implementation should note
+that the code names the direct model's group order `m`, since there it is
+simultaneously the alphabet size; the block module uses `g` and `a` as here.
+
+## 2.4 Cyclic group action
 
 Let $C_g = \{e, r, \dots, r^{g-1}\}$ act on the family through transformations
 $T_r$. In the direct categorical model the alphabet size equals the group order
@@ -986,7 +1011,7 @@ the structural properties and the statistical claims.
 3. Barron, A. R., Rissanen, J., and Yu, B. (1998). The minimum description length principle in coding and modeling. *IEEE Transactions on Information Theory*, 44(6), 2743–2760.
 4. Grünwald, P. D. (2007). *The Minimum Description Length Principle*. MIT Press.
 5. Rissanen, J. (2007). *Information and Complexity in Statistical Modeling*. Springer.
-6. Grünwald, P. D., and Roos, T. (2019). Minimum description length revisited. arXiv:1908.08484.
+6. Grünwald, P. D., and Roos, T. (2019). Minimum description length revisited. *International Journal of Mathematics for Industry*, 11(1), 1930001. arXiv:1908.08484.
 7. Watanabe, S. (2009). *Algebraic Geometry and Statistical Learning Theory*. Cambridge University Press.
 8. Watanabe, S. (2013). A widely applicable Bayesian information criterion. *JMLR*, 14, 867–897.
 9. Drton, M., and Plummer, M. (2017). A Bayesian information criterion for singular models. *JRSS B*, 79(2), 323–380.
@@ -997,16 +1022,18 @@ the structural properties and the statistical claims.
 14. Davis, R. A., Lee, T. C. M., and Rodriguez-Yam, G. A. (2006). Structural break estimation for nonstationary time series models. *JASA*, 101(473), 223–239.
 15. Niu, Y. S., Hao, N., and Zhang, H. (2016). Multiple change-point detection: a selective overview. *Statistical Science*, 31(4), 611–623.
 16. Wang, G., Zou, C., and Yin, G. (2018). Change-point detection in multinomial data with a large number of categories. *The Annals of Statistics*, 46(5), 2020–2044.
-17. Truong, C., and Runge, V. (2024). An efficient algorithm for exact segmentation of large compositional and categorical time series. *Stat*, 13(1).
-18. Pérez-Ortiz, M. F., Lardy, T., de Heide, R., and Grünwald, P. D. (2024). E-statistics, group invariance and anytime-valid testing. *The Annals of Statistics*, 52(4).
-19. Yu, L., Zhao, R., Huang, J., Zhu, L., and Zhu, X. (2026). A sparse dimension-reduced subspace-based approach for detecting multiple change points in high-dimensional data. *Journal of Multivariate Analysis*.
+17. Truong, C., and Runge, V. (2024). An efficient algorithm for exact segmentation of large compositional and categorical time series. *Stat*, 13(4), e70012.
+18. Pérez-Ortiz, M. F., Lardy, T., de Heide, R., and Grünwald, P. D. (2024). E-statistics, group invariance and anytime-valid testing. *The Annals of Statistics*, 52(4), 1410–1432.
+19. Yu, L., Zhao, R., Huang, J., Zhu, L., and Zhu, X. (2026). A sparse dimension-reduced subspace-based approach for detecting multiple change points in high-dimensional data. *Journal of Multivariate Analysis*, 213.
 20. Csiszár, I., and Shields, P. C. (2004). Information theory and statistics: a tutorial. *Foundations and Trends in Communications and Information Theory*, 1(4), 417–528.
 21. Rho, M., Tang, H., and Ye, Y. (2010). FragGeneScan: predicting genes in short and error-prone reads. *Nucleic Acids Research*, 38(20), e191.
 22. Cancrini, N., Martinelli, F., Roberto, C., and Toninelli, C. (2008). Kinetically constrained spin models. *Probability Theory and Related Fields*, 140, 459–504.
 
-> **Note on references.** Entries 6, 15–19 were added in this version from an
-> external prior-art review and have not been independently re-verified against
-> the published record. Verify before submission.
+> **Note on references.** Entries 6 and 15–19 were added in this version from an
+> external prior-art review. Authors, titles and venues have since been checked
+> against the published record; entry 17 appeared in *Stat* 13(4) as e70012, not
+> 13(1), and entry 6 has been given its journal venue. Entry 19 is in press —
+> volume assigned, pagination not yet fixed.
 
 ---
 
