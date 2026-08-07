@@ -38,10 +38,11 @@ lemma zeta_map_add (x y : ZMod g) : zeta g (x + y) = zeta g x * zeta g y := by
   rw [this, Complex.exp_add, Complex.exp_int_mul_two_pi_mul_I, one_mul]
 
 lemma zeta_norm_one (x : ZMod g) : ‖zeta g x‖ = 1 := by
-  rw [zeta, Complex.norm_exp]
-  have : (2 * Real.pi * Complex.I * (x.val : ℂ) / (g : ℂ)).re = 0 := by
-    simp [Complex.div_re, Complex.mul_re, Complex.mul_im]
-  rw [this, Real.exp_zero]
+  have hz : 2 * (Real.pi : ℂ) * Complex.I * (x.val : ℂ) / (g : ℂ)
+      = ((2 * Real.pi * x.val / g : ℝ) : ℂ) * Complex.I := by
+    push_cast
+    ring
+  rw [zeta, hz, Complex.norm_eq_abs, Complex.abs_exp_ofReal_mul_I]
 
 /-- The fundamental Fourier basis of Section 5.2 as a `FundChar`. -/
 noncomputable def stdChar (g : ℕ) [NeZero g] : FundChar g where

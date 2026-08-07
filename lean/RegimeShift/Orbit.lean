@@ -49,8 +49,10 @@ theorem act_injective (χ : FundChar g) (hχ : Function.Injective χ.e)
 /-- **Trivial stabiliser at a regular point** — assumption 2 of Proposition 1,
 in the form it is used: no nonidentity element fixes `η`. -/
 theorem stabilizer_trivial (χ : FundChar g) (hχ : Function.Injective χ.e)
-    (η : ℂ) (hη : η ≠ 0) (r : ZMod g) (hr : act χ r η = η) : r = 0 :=
-  act_injective χ hχ η hη (by rw [hr, act_zero])
+    (η : ℂ) (hη : η ≠ 0) (r : ZMod g) (hr : act χ r η = η) : r = 0 := by
+  refine act_injective χ hχ η hη ?_
+  show act χ r η = act χ 0 η
+  rw [hr, act_zero]
 
 /-- **Orbit collapse at the singular point.** At `η = 0` every group element
 acts trivially, so the relative shift carries no information and the two-part
