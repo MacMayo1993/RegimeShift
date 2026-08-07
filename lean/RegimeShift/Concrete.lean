@@ -36,6 +36,7 @@ lemma zeta_map_add (x y : ZMod g) : zeta g (x + y) = zeta g x * zeta g y := by
     linear_combination (2 * Real.pi * Complex.I) * hcast
   rw [this, Complex.exp_add, Complex.exp_int_mul_two_pi_mul_I, one_mul]
 
+omit [NeZero g] in
 lemma zeta_norm_one (x : ZMod g) : ‖zeta g x‖ = 1 := by
   have hz : 2 * (Real.pi : ℂ) * Complex.I * (x.val : ℂ) / (g : ℂ)
       = ((2 * Real.pi * x.val / g : ℝ) : ℂ) * Complex.I := by

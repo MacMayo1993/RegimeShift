@@ -17,7 +17,7 @@ import RegimeShift.Fourier
 
 namespace RegimeShift
 
-variable {g : ℕ} [NeZero g]
+variable {g : ℕ}
 
 /-- The action of `C_g` on the fundamental coordinate. -/
 noncomputable def act (χ : FundChar g) (r : ZMod g) (η : ℂ) : ℂ := χ.e r * η
@@ -54,7 +54,6 @@ theorem stabilizer_trivial (χ : FundChar g) (hχ : Function.Injective χ.e)
   show act χ r η = act χ 0 η
   rw [hr, act_zero]
 
-omit [NeZero g] in
 /-- **Orbit collapse at the singular point.** At `η = 0` every group element
 acts trivially, so the relative shift carries no information and the two-part
 code of Proposition 1 is decoding an unidentifiable label. -/

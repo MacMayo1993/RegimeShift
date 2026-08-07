@@ -5,12 +5,10 @@ is deliberately narrow: Lean verifies the **geometry and the dimension
 counting**, which is where the paper's novelty lies. The asymptotic coding law
 is assumed, as a classical theorem, exactly where the manuscript assumes it.
 
-> **Status: not yet compiled.** These files were written in an environment with
-> no Lean toolchain and no network access to `lean-lang.org`, so nothing here
-> has been checked by the compiler. The CI workflow
-> (`.github/workflows/lean.yml`) is the first thing that will actually build
-> them; treat any claim below as provisional until that workflow is green.
-> There are no `sorry`s — but an uncompiled proof is not a proof.
+> **Status: compiling.** `.github/workflows/lean.yml` builds this library
+> against mathlib on every push touching `lean/`, and fails the job if any
+> `sorry` appears. Every entry marked *proved* below is checked by the
+> compiler.
 
 ## Claim-by-claim status
 

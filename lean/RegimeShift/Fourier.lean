@@ -38,6 +38,7 @@ namespace FundChar
 
 variable (χ : FundChar g)
 
+omit [NeZero g] in
 lemma mul_star_self (x : ZMod g) : χ.e x * (starRingEnd ℂ) (χ.e x) = 1 := by
   have habs : Complex.abs (χ.e x) = 1 := by
     simpa [Complex.norm_eq_abs] using χ.norm_one x
