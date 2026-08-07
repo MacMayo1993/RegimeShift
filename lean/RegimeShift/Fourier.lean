@@ -39,9 +39,10 @@ namespace FundChar
 variable (χ : FundChar g)
 
 lemma mul_star_self (x : ZMod g) : χ.e x * (starRingEnd ℂ) (χ.e x) = 1 := by
-  rw [mul_comm, Complex.mul_conj]
-  norm_cast
-  simp [Complex.normSq_eq_abs, ← Complex.norm_eq_abs, χ.norm_one x]
+  have habs : Complex.abs (χ.e x) = 1 := by
+    simpa [Complex.norm_eq_abs] using χ.norm_one x
+  rw [Complex.mul_conj, Complex.normSq_eq_abs, habs]
+  norm_num
 
 /-- The character carries subtraction in the index to multiplication by the
 conjugate — the only fact about the basis that equivariance needs. -/
