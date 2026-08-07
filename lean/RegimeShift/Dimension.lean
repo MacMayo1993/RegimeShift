@@ -36,12 +36,15 @@ representation. -/
 noncomputable def sinVec (g : ℕ) : ZMod g → ℝ :=
   fun j => Real.sin (2 * π * j.val / g)
 
+omit [NeZero g] in
 @[simp] lemma cosVec_zero : cosVec g 0 = 1 := by
   simp [cosVec]
 
+omit [NeZero g] in
 @[simp] lemma sinVec_zero : sinVec g 0 = 0 := by
   simp [sinVec]
 
+omit [NeZero g] in
 /-- For `g ≥ 3` the angle `2π/g` lies strictly between `0` and `π`, so the sine
 direction is genuinely nonzero — this is the whole reason the fundamental
 component is two-dimensional there. -/
@@ -50,7 +53,7 @@ lemma sin_two_pi_div_ne_zero (hg : 3 ≤ g) : Real.sin (2 * π / g) ≠ 0 := by
   have hgpos : (0 : ℝ) < (g : ℝ) := by linarith
   refine ne_of_gt (Real.sin_pos_of_pos_of_lt_pi ?_ ?_)
   · positivity
-  · rw [div_lt_iff hgpos]
+  · rw [div_lt_iff₀ hgpos]
     nlinarith [Real.pi_pos]
 
 /-- **The two directions are independent exactly when `g ≥ 3`.** -/
@@ -72,8 +75,10 @@ theorem cosSin_linearIndependent (hg : 3 ≤ g) :
 /-- At `g = 2` the sine direction vanishes identically: `sin(πj) = 0`. -/
 theorem sinVec_two : sinVec 2 = 0 := by
   funext j
+  show Real.sin (2 * π * (j.val : ℝ) / 2) = 0
   have h : 2 * π * (j.val : ℝ) / 2 = (j.val : ℝ) * π := by ring
-  simp [sinVec, h, Real.sin_nat_mul_pi]
+  rw [h]
+  exact Real.sin_nat_mul_pi j.val
 
 lemma cosVec_ne_zero : cosVec g ≠ 0 := by
   intro h
@@ -94,10 +99,10 @@ span collapses to the one-dimensional sign representation. -/
 theorem finrank_fund_two :
     Module.finrank ℝ (Submodule.span ℝ (Set.range ![cosVec 2, sinVec 2]))
       = dFund 2 := by
-  have hrange : Set.range ![cosVec 2, sinVec 2] = {cosVec 2, (0 : ZMod 2 → ℝ)} := by
+  have hrange : Set.range ![cosVec 2, sinVec 2] = {(0 : ZMod 2 → ℝ), cosVec 2} := by
     rw [sinVec_two]
     simp
-  rw [hrange, Set.pair_comm, Submodule.span_insert_zero,
+  rw [hrange, Submodule.span_insert_zero,
     finrank_span_singleton (cosVec_ne_zero (g := 2))]
   simp [dFund]
 
