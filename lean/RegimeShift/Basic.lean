@@ -31,19 +31,23 @@ Section 2.4; applied to a logit vector it is the same permutation acting one
 level down. -/
 def shift (r : Idx g) (p : Idx g → ℝ) : Idx g → ℝ := fun j => p (j - r)
 
+omit [NeZero g] in
 @[simp] lemma shift_apply (r : Idx g) (p : Idx g → ℝ) (j : Idx g) :
     shift r p j = p (j - r) := rfl
 
+omit [NeZero g] in
 @[simp] lemma shift_zero (p : Idx g → ℝ) : shift 0 p = p := by
   funext j; simp [shift]
 
 /-- `shift` is an action of the additive group `ZMod g`. -/
+omit [NeZero g] in
 lemma shift_shift (r s : Idx g) (p : Idx g → ℝ) :
     shift r (shift s p) = shift (r + s) p := by
   funext j
   simp [shift, sub_sub]
 
 /-- `shift r` is precomposition with the equivalence `j ↦ j - r`. -/
+omit [NeZero g] in
 lemma shift_eq_comp (r : Idx g) (p : Idx g → ℝ) :
     shift r p = p ∘ (Equiv.subRight r) := rfl
 

@@ -33,7 +33,6 @@ lemma zeta_map_add (x y : ZMod g) : zeta g (x + y) = zeta g x * zeta g y := by
     have hcast : ((x.val + y.val : ℕ) : ℂ) = (g : ℂ) * (q : ℂ) + ((x + y).val : ℂ) := by
       exact_mod_cast hsplit
     field_simp at hcast ⊢
-    push_cast
     linear_combination (2 * Real.pi * Complex.I) * hcast
   rw [this, Complex.exp_add, Complex.exp_int_mul_two_pi_mul_I, one_mul]
 
