@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 
 from regimeshift.detectors import (
+    approximate_orbit_detector,
     fit_fundamental,
     full_detector,
     fundamental_detector,
@@ -26,6 +27,7 @@ from regimeshift.detectors import (
     run_all_detectors,
     shared_orbit_detector,
     split_penalty,
+    validate_pair,
 )
 from regimeshift.fourier import fundamental_dimension, probabilities, rotation_matrix
 from regimeshift.scenarios import build_segments
@@ -321,3 +323,70 @@ def test_scores_are_finite_at_extreme_counts(m):
     for result in run_all_detectors(cL, cR, m).values():
         assert np.isfinite(result.score)
         assert np.isfinite(result.raw_gain)
+
+
+# --------------------------------------------------------------------------
+# Uniform input validation
+# --------------------------------------------------------------------------
+
+ALL_DETECTORS = (
+    full_detector,
+    fundamental_detector,
+    shared_orbit_detector,
+    approximate_orbit_detector,
+)
+
+
+@pytest.mark.parametrize("detector", ALL_DETECTORS)
+def test_detectors_reject_alphabet_mismatch(detector):
+    """A vector whose length disagrees with ``m`` must raise, not score.
+
+    Without the check the likelihood is computed from the vector length and the
+    penalty from ``m``, so the detector returns a score assembled from two
+    different alphabet sizes.
+    """
+    m = 4
+    cL = np.full(m + 1, 10.0)
+    cR = np.full(m + 1, 10.0)
+    with pytest.raises(ValueError, match="shape"):
+        detector(cL, cR, m)
+
+
+@pytest.mark.parametrize("detector", ALL_DETECTORS)
+def test_detectors_reject_empty_segment(detector):
+    m = 4
+    cL = np.full(m, 10.0)
+    cR = np.zeros(m)
+    with pytest.raises(ValueError, match="nonempty"):
+        detector(cL, cR, m)
+
+
+@pytest.mark.parametrize("detector", ALL_DETECTORS)
+def test_detectors_reject_negative_and_nonfinite(detector):
+    m = 4
+    good = np.full(m, 10.0)
+    bad_negative = good.copy()
+    bad_negative[0] = -1.0
+    with pytest.raises(ValueError, match="nonnegative"):
+        detector(bad_negative, good, m)
+
+    bad_nan = good.copy()
+    bad_nan[0] = np.nan
+    with pytest.raises(ValueError, match="finite"):
+        detector(good, bad_nan, m)
+
+
+def test_validate_pair_returns_float_arrays():
+    m = 3
+    cL, cR = validate_pair([1, 2, 3], (4, 5, 6), m)
+    assert cL.dtype == float and cR.dtype == float
+    np.testing.assert_allclose(cL, [1.0, 2.0, 3.0])
+
+
+def test_split_penalty_is_negative_at_tiny_sizes():
+    """The asymptotic formula is not a codelength at very small ``n``.
+
+    Documented behaviour, asserted so it cannot change silently: with one
+    observation per segment the increment is ``-(dim/2) log 2``.
+    """
+    assert split_penalty(2, 1, 1) == pytest.approx(-np.log(2.0))

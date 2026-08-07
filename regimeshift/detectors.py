@@ -27,6 +27,7 @@ import numpy as np
 from scipy.optimize import minimize
 
 from .fourier import (
+    _check_m,
     fourier_design_matrix,
     rotation_matrix as _rotation,
     full_dimension,
@@ -42,6 +43,7 @@ __all__ = [
     "reset_fit_failures",
     "split_penalty",
     "label_cost",
+    "validate_pair",
     "multinomial_loglik",
     "fit_fundamental",
     "fundamental_loglik",
@@ -141,6 +143,17 @@ def split_penalty(dim: int, n_left: int, n_right: int) -> float:
 
     ``(dim / 2) * log(n_left * n_right / n)``. The coefficient of ``log n`` is
     ``dim / 2``; the split fraction only affects the bounded term.
+
+    **Do not read this literally at tiny sample sizes.** It is the leading term
+    of an asymptotic expansion, and nothing constrains its sign: when
+    ``n_left * n_right < n`` the expression is *negative*, so the "penalty"
+    rewards splitting. At ``n_left = n_right = 1`` it is ``-(dim/2) log 2``.
+    Such sizes are far outside the regime where the BIC/Laplace expansion of
+    Section 4.1 approximates a codelength, and the omitted ``O(1)`` term is not
+    small there. The function computes the formula as stated rather than
+    clamping it, because clamping would silently substitute a different
+    complexity law; callers working at very small ``n`` should use an exact code
+    instead.
     """
     if n_left <= 0 or n_right <= 0:
         raise ValueError("both segments must be non-empty")
@@ -159,6 +172,40 @@ def label_cost(m: int) -> float:
     if m < 2:
         raise ValueError("group order must be >= 2")
     return float(np.log(m - 1))
+
+
+def validate_pair(
+    counts_left: np.ndarray, counts_right: np.ndarray, m: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """Validate and coerce a segment pair for any detector.
+
+    Every public detector routes its inputs through here so that the same
+    contract holds across Models A-D: both segments are ``(m,)`` count vectors,
+    finite, nonnegative, and nonempty.
+
+    The shape check matters more than it looks. Without it a detector computes
+    its likelihood from the length of the vector it was handed and its penalty
+    from ``m``, so a mismatched pair yields a score built from two different
+    alphabet sizes -- a wrong number rather than an error.
+
+    Nonemptiness is required because the known-split penalty (Section 4.2) is
+    undefined when a segment is empty; ``split_penalty`` already refuses such a
+    call, and this makes the same requirement uniform across detectors that do
+    not go through it.
+    """
+    _check_m(m)
+    cL = np.asarray(counts_left, dtype=float)
+    cR = np.asarray(counts_right, dtype=float)
+    for name, c in (("counts_left", cL), ("counts_right", cR)):
+        if c.shape != (m,):
+            raise ValueError(f"{name} must have shape ({m},), got {c.shape}")
+        if not np.all(np.isfinite(c)):
+            raise ValueError(f"{name} must be finite")
+        if np.any(c < 0):
+            raise ValueError(f"{name} must be nonnegative")
+        if c.sum() <= 0:
+            raise ValueError(f"{name} must be nonempty (positive total count)")
+    return cL, cR
 
 
 def multinomial_loglik(counts: np.ndarray) -> float:
@@ -240,8 +287,7 @@ def fundamental_loglik(theta: np.ndarray, counts: np.ndarray, m: int) -> float:
 
 def full_detector(counts_left: np.ndarray, counts_right: np.ndarray, m: int) -> DetectorResult:
     """Model A: unrestricted multinomial, BIC-scored known-split increment."""
-    cL = np.asarray(counts_left, dtype=float)
-    cR = np.asarray(counts_right, dtype=float)
+    cL, cR = validate_pair(counts_left, counts_right, m)
     gain = multinomial_loglik(cL) + multinomial_loglik(cR) - multinomial_loglik(cL + cR)
     dim = full_dimension(m)
     pen = split_penalty(dim, int(cL.sum()), int(cR.sum()))
@@ -250,8 +296,7 @@ def full_detector(counts_left: np.ndarray, counts_right: np.ndarray, m: int) -> 
 
 def fundamental_detector(counts_left: np.ndarray, counts_right: np.ndarray, m: int) -> DetectorResult:
     """Model B: independently fitted coordinates inside the fundamental subspace."""
-    cL = np.asarray(counts_left, dtype=float)
-    cR = np.asarray(counts_right, dtype=float)
+    cL, cR = validate_pair(counts_left, counts_right, m)
     _, ll_null = fit_fundamental(cL + cR, m)
     _, ll_left = fit_fundamental(cL, m)
     _, ll_right = fit_fundamental(cR, m)
@@ -282,8 +327,7 @@ def shared_orbit_detector(counts_left: np.ndarray, counts_right: np.ndarray, m: 
     in full, and its Section 9.6 for what collapse does to the ``m = 2`` null in
     practice.
     """
-    cL = np.asarray(counts_left, dtype=float)
-    cR = np.asarray(counts_right, dtype=float)
+    cL, cR = validate_pair(counts_left, counts_right, m)
     _, ll_null = fit_fundamental(cL + cR, m)
 
     best_ll, best_shift = -np.inf, None
@@ -449,8 +493,7 @@ def approximate_orbit_detector(
     ``deviation_scale -> 0`` limit is that detector exactly rather than merely
     asymptotically.
     """
-    cL = np.asarray(counts_left, dtype=float)
-    cR = np.asarray(counts_right, dtype=float)
+    cL, cR = validate_pair(counts_left, counts_right, m)
     _, ll_null = fit_fundamental(cL + cR, m)
 
     best = (-np.inf, None, None)

@@ -30,7 +30,23 @@ def file_digest(path: Path) -> str:
 
 
 def git_commit() -> dict:
-    """The repository's current commit and cleanliness, if git is available."""
+    """The repository's commit, cleanliness, and *what* made it unclean.
+
+    A commit plus ``dirty: true`` does not identify the source state a run was
+    produced from: it says only that the tree differed from the commit, not how.
+    Any claim about the difference then rests on prose written alongside the
+    results rather than on the manifest itself.
+
+    So when the tree is dirty this also records the porcelain status lines and a
+    SHA-256 of ``git diff HEAD``, which together pin the modification to tracked
+    files, and lists untracked paths. A reader can reproduce the commit, apply
+    nothing, and check whether the recorded diff digest is empty; if it is not,
+    the manifest says exactly which files moved and fingerprints the change.
+
+    This still does not archive the diff *content* -- a digest proves a later
+    tree matches, not what the tree was. For a release run, use
+    ``require_clean`` (see :func:`write_manifest`) so the question cannot arise.
+    """
     def run(*args):
         return subprocess.run(
             args, cwd=Path(__file__).resolve().parent, capture_output=True, text=True, timeout=10
@@ -41,10 +57,21 @@ def git_commit() -> dict:
         if head.returncode != 0:
             return {"commit": None, "note": "not a git checkout"}
         status = run("git", "status", "--porcelain")
-        return {
+        lines = [ln for ln in status.stdout.splitlines() if ln.strip()]
+        record = {
             "commit": head.stdout.strip(),
-            "dirty": bool(status.stdout.strip()),
+            "dirty": bool(lines),
         }
+        if lines:
+            diff = run("git", "diff", "HEAD")
+            record["tracked_diff_sha256"] = hashlib.sha256(
+                diff.stdout.encode()
+            ).hexdigest()
+            record["status_lines"] = lines
+            record["untracked"] = [
+                ln[3:] for ln in lines if ln.startswith("??")
+            ]
+        return record
     except (OSError, subprocess.SubprocessError):
         return {"commit": None, "note": "git unavailable"}
 
@@ -71,9 +98,23 @@ def environment() -> dict:
 def write_manifest(out_dir: Path, *, grid: str, spec: dict, base_seed: int,
                    n_configs: int, n_datasets: int, workers: int,
                    elapsed_seconds: float | None = None, units: str = "nats",
-                   n_boot: int = 0) -> Path:
-    """Write ``run_manifest.json`` describing how a results directory was made."""
+                   n_boot: int = 0, require_clean: bool = False) -> Path:
+    """Write ``run_manifest.json`` describing how a results directory was made.
+
+    With ``require_clean`` the manifest refuses to certify a run made from a
+    modified working tree, raising before anything is written. That is the
+    intended setting for a release or production run: it makes the result set
+    tied to a commit that exists in history rather than to a commit plus an
+    explanation of how the tree differed from it.
+    """
     out_dir = Path(out_dir)
+    git = git_commit()
+    if require_clean and git.get("dirty"):
+        raise RuntimeError(
+            "refusing to write a release manifest from a dirty working tree; "
+            f"modified or untracked paths: {git.get('status_lines')}. "
+            "Commit or stash them, or drop --require-clean for an exploratory run."
+        )
     files = sorted(
         p for p in out_dir.glob("*.csv") if p.name != "checkpoint.csv"
     )
@@ -89,7 +130,7 @@ def write_manifest(out_dir: Path, *, grid: str, spec: dict, base_seed: int,
         "elapsed_seconds": None if elapsed_seconds is None else round(elapsed_seconds, 1),
         "report_units": units,
         "bootstrap_replicates": n_boot,
-        "git": git_commit(),
+        "git": git,
         "environment": environment(),
         "files": {p.name: {"sha256": file_digest(p), "bytes": p.stat().st_size} for p in files},
     }

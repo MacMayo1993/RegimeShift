@@ -91,6 +91,9 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--base-seed", type=int, default=BASE_SEED)
     run.add_argument("--checkpoint", type=Path, default=None, help="defaults to <out>/checkpoint.csv")
     run.add_argument("--no-progress", action="store_true")
+    run.add_argument("--require-clean", action="store_true",
+                     help="refuse to write the manifest if the working tree is dirty; "
+                          "use for release and production runs")
     run.add_argument("--units", choices=UNITS, default="nats",
                      help="units for the reported slope columns")
     run.add_argument("--n-boot", type=int, default=500,
@@ -131,6 +134,7 @@ def main(argv: list[str] | None = None) -> int:
         args.out, grid=args.grid, spec=spec, base_seed=args.base_seed,
         n_configs=len(configs), n_datasets=datasets, workers=args.workers,
         elapsed_seconds=elapsed, units=args.units, n_boot=args.n_boot,
+        require_clean=args.require_clean,
     )
     print(f"\nprovenance written to {manifest}")
     return 0

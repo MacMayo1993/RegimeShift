@@ -325,7 +325,16 @@ python -m regimeshift run --grid quick --out results/quick --workers 4
 # the manuscript design: 312 configurations, 936 detector rows,
 # 468,000 simulated two-segment datasets, base seed 20260713
 python -m regimeshift run --grid production --out results/v3-production --workers 16
+
+# for a release run: refuse to certify results from a modified working tree
+python -m regimeshift run --grid production --out results/release --require-clean
 ```
+
+`--require-clean` aborts before writing anything if the tree differs from
+`HEAD`. Without it the manifest still records *how* the tree was dirty — the
+porcelain status lines, the untracked paths, and a SHA-256 of `git diff HEAD` —
+so a dirty run is described by the record rather than by prose written beside
+it. Use the flag for anything meant to be citable.
 
 **One complete production run is committed** under
 [`results/v3-production/`](results/v3-production/), so the manuscript's numbers
