@@ -45,6 +45,7 @@ lemma mul_star_self (x : ZMod g) : χ.e x * (starRingEnd ℂ) (χ.e x) = 1 := by
   rw [Complex.mul_conj, Complex.normSq_eq_abs, habs]
   norm_num
 
+omit [NeZero g] in
 /-- The character carries subtraction in the index to multiplication by the
 conjugate — the only fact about the basis that equivariance needs. -/
 lemma e_sub (j r : ZMod g) : χ.e (j - r) = χ.e j * (starRingEnd ℂ) (χ.e r) := by

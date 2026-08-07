@@ -18,6 +18,7 @@ Re-analyse an existing results file::
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from pathlib import Path
 
@@ -32,7 +33,7 @@ from .analysis import (
     crossover_ratio_summary,
     score_regression_summary,
 )
-from .manifest import write_manifest
+from .manifest import git_commit, write_manifest
 from .runner import PRODUCTION_GRID, QUICK_GRID, run_grid
 from .simulation import BASE_SEED, build_grid
 
@@ -91,6 +92,9 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--base-seed", type=int, default=BASE_SEED)
     run.add_argument("--checkpoint", type=Path, default=None, help="defaults to <out>/checkpoint.csv")
     run.add_argument("--no-progress", action="store_true")
+    run.add_argument("--require-clean", action="store_true",
+                     help="refuse to write the manifest if the working tree is dirty; "
+                          "use for release and production runs")
     run.add_argument("--units", choices=UNITS, default="nats",
                      help="units for the reported slope columns")
     run.add_argument("--n-boot", type=int, default=500,
@@ -109,6 +113,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "analyse":
         _write_reports(pd.read_csv(args.results), args.out, n_boot=args.n_boot, units=args.units)
         return 0
+
+    # Capture provenance *before* the grid runs: refusing a release run after
+    # it has completed would be useless, and the source state that matters is
+    # the one the run started from.
+    git_state = git_commit()
+    if args.require_clean and git_state.get("dirty"):
+        print(
+            "refusing to start a release run from a dirty working tree; "
+            f"modified or untracked paths: {git_state.get('status_lines')}",
+            file=sys.stderr,
+        )
+        return 1
 
     spec = GRIDS[args.grid]
     configs = build_grid(
@@ -131,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         args.out, grid=args.grid, spec=spec, base_seed=args.base_seed,
         n_configs=len(configs), n_datasets=datasets, workers=args.workers,
         elapsed_seconds=elapsed, units=args.units, n_boot=args.n_boot,
+        require_clean=args.require_clean, git=git_state,
     )
     print(f"\nprovenance written to {manifest}")
     return 0
