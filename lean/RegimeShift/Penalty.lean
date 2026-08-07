@@ -41,7 +41,7 @@ noncomputable def Kstar : ℝ := 1 / (2 * Real.log 2)
 /-- Continuous-dimension increments of the four model classes on a regular
 stratum (Sections 3.1–3.4). `d_fund` is `1` for `g = 2` and `2` for `g ≥ 3`
 (Section 2.4). Model D's increment is the asymptotic one. -/
-noncomputable def dFund (g : ℕ) : ℕ := if g ≤ 2 then 1 else 2
+def dFund (g : ℕ) : ℕ := if g ≤ 2 then 1 else 2
 
 inductive Model | A | B | C | D
 

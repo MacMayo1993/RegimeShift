@@ -59,7 +59,7 @@ lemma softmax_pos (ℓ : Idx g → ℝ) (j : Idx g) : 0 < softmax ℓ j :=
 
 /-- The chart lands in the simplex. -/
 lemma softmax_sum_one (ℓ : Idx g → ℝ) : ∑ j, softmax ℓ j = 1 := by
-  rw [softmax]
+  simp only [softmax]
   rw [← Finset.sum_div]
   exact div_self (ne_of_gt (sum_exp_pos ℓ))
 
