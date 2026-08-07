@@ -1,0 +1,40 @@
+name: lean
+
+on:
+  push:
+    paths:
+      - 'lean/**'
+      - '.github/workflows/lean.yml'
+  pull_request:
+    paths:
+      - 'lean/**'
+      - '.github/workflows/lean.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install elan
+        run: |
+          curl -sSfL https://elan.lean-lang.org/elan-init.sh -o elan-init.sh
+          sh elan-init.sh -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch mathlib cache
+        working-directory: lean
+        run: lake exe cache get
+
+      - name: Build
+        working-directory: lean
+        run: lake build
+
+      - name: Check for sorry
+        working-directory: lean
+        run: |
+          if grep -rn '\bsorry\b' RegimeShift.lean RegimeShift/; then
+            echo "::error::incomplete proofs present"
+            exit 1
+          fi
