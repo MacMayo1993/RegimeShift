@@ -69,3 +69,17 @@ def test_git_commit_reports_this_checkout():
     if record.get("dirty"):
         assert "tracked_diff_sha256" in record
         assert record["status_lines"]
+
+
+def test_write_manifest_accepts_a_captured_git_state(tmp_path, monkeypatch):
+    """The CLI captures provenance before the run; the manifest must use it.
+
+    Recording the state at the end would describe a tree the run did not start
+    from -- and refusing a release run only after it finished would be useless.
+    """
+    monkeypatch.setattr(manifest_mod, "git_commit", lambda: {
+        "commit": "end-state", "dirty": True, "status_lines": ["?? results/x.csv"],
+    })
+    captured = {"commit": "start-state", "dirty": False}
+    path = _write(tmp_path, require_clean=True, git=captured)
+    assert json.loads(path.read_text())["git"]["commit"] == "start-state"

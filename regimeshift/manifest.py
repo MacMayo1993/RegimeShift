@@ -98,7 +98,8 @@ def environment() -> dict:
 def write_manifest(out_dir: Path, *, grid: str, spec: dict, base_seed: int,
                    n_configs: int, n_datasets: int, workers: int,
                    elapsed_seconds: float | None = None, units: str = "nats",
-                   n_boot: int = 0, require_clean: bool = False) -> Path:
+                   n_boot: int = 0, require_clean: bool = False,
+                   git: dict | None = None) -> Path:
     """Write ``run_manifest.json`` describing how a results directory was made.
 
     With ``require_clean`` the manifest refuses to certify a run made from a
@@ -106,9 +107,15 @@ def write_manifest(out_dir: Path, *, grid: str, spec: dict, base_seed: int,
     intended setting for a release or production run: it makes the result set
     tied to a commit that exists in history rather than to a commit plus an
     explanation of how the tree differed from it.
+
+    Pass ``git`` to record a state captured earlier -- normally at the *start*
+    of the run, which is the only useful time to refuse one. The CLI does this,
+    so ``--require-clean`` aborts before the grid runs rather than after; the
+    check here remains as a backstop for direct callers.
     """
     out_dir = Path(out_dir)
-    git = git_commit()
+    if git is None:
+        git = git_commit()
     if require_clean and git.get("dirty"):
         raise RuntimeError(
             "refusing to write a release manifest from a dirty working tree; "

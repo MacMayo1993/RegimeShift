@@ -18,6 +18,7 @@ Re-analyse an existing results file::
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from pathlib import Path
 
@@ -32,7 +33,7 @@ from .analysis import (
     crossover_ratio_summary,
     score_regression_summary,
 )
-from .manifest import write_manifest
+from .manifest import git_commit, write_manifest
 from .runner import PRODUCTION_GRID, QUICK_GRID, run_grid
 from .simulation import BASE_SEED, build_grid
 
@@ -113,6 +114,18 @@ def main(argv: list[str] | None = None) -> int:
         _write_reports(pd.read_csv(args.results), args.out, n_boot=args.n_boot, units=args.units)
         return 0
 
+    # Capture provenance *before* the grid runs: refusing a release run after
+    # it has completed would be useless, and the source state that matters is
+    # the one the run started from.
+    git_state = git_commit()
+    if args.require_clean and git_state.get("dirty"):
+        print(
+            "refusing to start a release run from a dirty working tree; "
+            f"modified or untracked paths: {git_state.get('status_lines')}",
+            file=sys.stderr,
+        )
+        return 1
+
     spec = GRIDS[args.grid]
     configs = build_grid(
         spec["groups"], spec["scenarios"], spec["effects"], spec["segment_lengths"],
@@ -134,7 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         args.out, grid=args.grid, spec=spec, base_seed=args.base_seed,
         n_configs=len(configs), n_datasets=datasets, workers=args.workers,
         elapsed_seconds=elapsed, units=args.units, n_boot=args.n_boot,
-        require_clean=args.require_clean,
+        require_clean=args.require_clean, git=git_state,
     )
     print(f"\nprovenance written to {manifest}")
     return 0
