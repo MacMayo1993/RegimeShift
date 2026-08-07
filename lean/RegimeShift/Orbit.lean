@@ -54,10 +54,10 @@ theorem stabilizer_trivial (χ : FundChar g) (hχ : Function.Injective χ.e)
   show act χ r η = act χ 0 η
   rw [hr, act_zero]
 
+omit [NeZero g] in
 /-- **Orbit collapse at the singular point.** At `η = 0` every group element
 acts trivially, so the relative shift carries no information and the two-part
 code of Proposition 1 is decoding an unidentifiable label. -/
-omit [NeZero g] in
 theorem act_zero_state (χ : FundChar g) (r : ZMod g) : act χ r 0 = 0 := by
   simp [act]
 

@@ -39,15 +39,15 @@ omit [NeZero g] in
 @[simp] lemma shift_zero (p : Idx g → ℝ) : shift 0 p = p := by
   funext j; simp [shift]
 
-/-- `shift` is an action of the additive group `ZMod g`. -/
 omit [NeZero g] in
+/-- `shift` is an action of the additive group `ZMod g`. -/
 lemma shift_shift (r s : Idx g) (p : Idx g → ℝ) :
     shift r (shift s p) = shift (r + s) p := by
   funext j
   simp [shift, sub_sub]
 
-/-- `shift r` is precomposition with the equivalence `j ↦ j - r`. -/
 omit [NeZero g] in
+/-- `shift r` is precomposition with the equivalence `j ↦ j - r`. -/
 lemma shift_eq_comp (r : Idx g) (p : Idx g → ℝ) :
     shift r p = p ∘ (Equiv.subRight r) := rfl
 
