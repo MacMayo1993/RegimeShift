@@ -23,17 +23,18 @@ is assumed, as a classical theorem, exactly where the manuscript assumes it.
 | `pen_split(d;L₁,L₂)` and its `ρ(1-ρ)` form | 4.2 | `penSplit_rho` | proved |
 | Leading coefficients are integer multiples of `K*` | 4.4 | `leading_coeff_multiple_of_Kstar` | proved (given the increments of §3) |
 | `Δd_A = g-1`, `Δd_B = Δd_D = d_fund`, `Δd_C = 0` | 3.1–3.4 | `Model.increment` | **definition, not theorem** |
-| `d_fund = 1` for `g=2`, `2` for `g≥3` | 2.4 | `dFund` | **definition, not theorem** — the isotypic decomposition is not formalised |
+| `d_fund = 1` for `g=2`, `2` for `g≥3` | 2.4 | `dFund`; `finrank_fund_two`, `finrank_fund_ge_three` | **partly proved** — the span of the two logit directions has dimension `dFund g`; that this span *is* the fundamental isotypic component is not formalised |
+| `cos φⱼ`, `sin φⱼ` independent iff `g ≥ 3`; sine vanishes at `g=2` | 5.2 | `cosSin_linearIndependent`, `sinVec_two` | proved |
 | `(d/2)·log L` leading penalty from a `d`-dimensional fit | 4.1 | — | **assumed** (classical BIC/Laplace; not in mathlib) |
 | Fisher orthonormality of the fundamental basis | 5.1–5.2 | — | not formalised |
 | Local JSD coefficient `(1-cos(2π/g))/4` | 5.4 | — | not formalised |
 | Singular asymptotics / RLCT at orbit collapse | 4.4, 6.3 | — | out of scope |
 | Monte Carlo slopes, calibrated power, misspecification | 9 | — | empirical, out of scope |
 
-The three most valuable next targets, in order: `dFund` as a theorem about the
-isotypic decomposition of the permutation representation of `C_g` on the
-sum-zero tangent space; Fisher orthonormality (root-of-unity sums); the local
-JSD limit.
+The three most valuable next targets, in order: identifying the span of
+`cosVec`/`sinVec` with the fundamental isotypic component of the permutation
+representation of `C_g` on the sum-zero tangent space, which would finish the
+`dFund` story; Fisher orthonormality (root-of-unity sums); the local JSD limit.
 
 ## Building
 
