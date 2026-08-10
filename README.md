@@ -330,6 +330,11 @@ python -m regimeshift run --grid production --out results/v3-production --worker
 python -m regimeshift run --grid production --out results/release --require-clean
 ```
 
+[`requirements-lock.txt`](requirements-lock.txt) pins the exact versions a
+committed result set was produced with. `pyproject.toml` states the *supported*
+ranges, which is what a library should declare; a rerun that needs to reproduce
+numbers wants the versions that actually ran, so install from the lockfile.
+
 `--require-clean` aborts before writing anything if the tree differs from
 `HEAD`. Without it the manifest still records *how* the tree was dirty — the
 porcelain status lines, the untracked paths, and a SHA-256 of `git diff HEAD` —

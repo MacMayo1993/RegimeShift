@@ -1,0 +1,22 @@
+# Exact dependency versions for a reproducible run.
+#
+# pyproject.toml states the *supported* ranges (numpy>=1.24, scipy>=1.10,
+# pandas>=2.0); this file states the versions a committed result set was
+# actually produced with, which is what a rerun needs to match. It is the
+# transitive closure of the runtime and test dependencies, excluding packages
+# that happened to be present in the build environment.
+#
+# Produced with Python 3.11.15 on Linux.
+#
+#     pip install -r requirements-lock.txt
+colorama==0.4.6
+iniconfig==2.3.0
+numpy==2.4.6
+packaging==24.0
+pandas==3.0.5
+pluggy==1.6.0
+pygments==2.20.0
+pytest==9.1.1
+python-dateutil==2.9.0.post0
+scipy==1.17.1
+six==1.16.0
