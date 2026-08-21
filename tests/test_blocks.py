@@ -272,3 +272,34 @@ def test_wrong_shaped_counts_are_rejected():
         fit_block_fundamental(np.ones((2, 4)), CODON)
     with pytest.raises(ValueError):
         block_probabilities(np.zeros((1, 3)), CODON)
+
+
+@pytest.mark.parametrize(
+    "detector",
+    [block_full_detector, block_fundamental_detector, block_shared_orbit_detector],
+)
+def test_block_detectors_reject_counts_of_the_wrong_geometry(detector):
+    """A mismatched geometry must raise, not return a score built from two of them.
+
+    ``block_full_detector`` reads its likelihood off the array it is handed and
+    its penalty off ``geometry``, so before ``validate_block_pair`` a (3, 4)
+    array scored against ``BlockGeometry(6, 4)`` returned a plausible-looking
+    number with dimension increment 18 instead of 9.
+    """
+    counts = np.full((3, 4), 25.0)
+    with pytest.raises(ValueError):
+        detector(counts, counts, BlockGeometry(g=6, a=4))
+
+
+@pytest.mark.parametrize(
+    "detector",
+    [block_full_detector, block_fundamental_detector, block_shared_orbit_detector],
+)
+def test_block_detectors_reject_empty_or_negative_segments(detector):
+    good = np.full(CODON.shape, 25.0)
+    with pytest.raises(ValueError):
+        detector(good, np.zeros(CODON.shape), CODON)
+    bad = good.copy()
+    bad[0, 0] = -1.0
+    with pytest.raises(ValueError):
+        detector(good, bad, CODON)

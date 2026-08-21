@@ -50,6 +50,7 @@ from .fourier import fourier_design_matrix, fundamental_dimension, rotation_matr
 __all__ = [
     "BlockGeometry",
     "CODON",
+    "validate_block_pair",
     "block_multinomial_loglik",
     "block_probabilities",
     "fit_block_fundamental",
@@ -193,10 +194,35 @@ def fit_block_fundamental(counts: np.ndarray, geometry: BlockGeometry):
     return result.x.reshape(shape), float(-result.fun)
 
 
+def validate_block_pair(counts_left, counts_right, geometry: BlockGeometry):
+    """Validate and coerce a block segment pair, as ``validate_pair`` does for the
+    direct model.
+
+    The shape check is the one that matters. ``block_full_detector`` computes its
+    likelihood block by block from the array it is handed and its penalty from
+    ``geometry``, so a ``(3, 4)`` array scored against ``BlockGeometry(6, 4)``
+    used to return a score built from two different geometries -- a wrong number
+    rather than an error, while the other two block detectors raised. Every block
+    detector now routes its inputs through here so the contract is uniform.
+    """
+    arrays = []
+    for name, counts in (("counts_left", counts_left), ("counts_right", counts_right)):
+        c = np.asarray(counts, dtype=float)
+        if c.shape != geometry.shape:
+            raise ValueError(f"{name} must have shape {geometry.shape}, got {c.shape}")
+        if not np.all(np.isfinite(c)):
+            raise ValueError(f"{name} must be finite")
+        if np.any(c < 0):
+            raise ValueError(f"{name} must be nonnegative")
+        if c.sum() <= 0:
+            raise ValueError(f"{name} must be nonempty (positive total count)")
+        arrays.append(c)
+    return arrays[0], arrays[1]
+
+
 def block_full_detector(counts_left, counts_right, geometry: BlockGeometry) -> DetectorResult:
     """Model A on blocks: every phase free on each side. Increment ``g(a-1)``."""
-    cL = np.asarray(counts_left, dtype=float)
-    cR = np.asarray(counts_right, dtype=float)
+    cL, cR = validate_block_pair(counts_left, counts_right, geometry)
     gain = (
         block_multinomial_loglik(cL)
         + block_multinomial_loglik(cR)
@@ -209,8 +235,7 @@ def block_full_detector(counts_left, counts_right, geometry: BlockGeometry) -> D
 
 def block_fundamental_detector(counts_left, counts_right, geometry: BlockGeometry) -> DetectorResult:
     """Model B on blocks: each side free inside the fundamental phase component."""
-    cL = np.asarray(counts_left, dtype=float)
-    cR = np.asarray(counts_right, dtype=float)
+    cL, cR = validate_block_pair(counts_left, counts_right, geometry)
     _, ll_null = fit_block_fundamental(cL + cR, geometry)
     _, ll_left = fit_block_fundamental(cL, geometry)
     _, ll_right = fit_block_fundamental(cR, geometry)
@@ -226,8 +251,7 @@ def block_shared_orbit_detector(counts_left, counts_right, geometry: BlockGeomet
     The shift permutes phase blocks and leaves the alphabet untouched, which is
     the whole point of the block family.
     """
-    cL = np.asarray(counts_left, dtype=float)
-    cR = np.asarray(counts_right, dtype=float)
+    cL, cR = validate_block_pair(counts_left, counts_right, geometry)
     _, ll_null = fit_block_fundamental(cL + cR, geometry)
 
     best_ll, best_shift = -np.inf, None
