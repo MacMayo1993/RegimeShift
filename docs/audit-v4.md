@@ -8,8 +8,9 @@ The audit was done against the repository at commit `bc72290`, by:
 
 * re-deriving every closed-form penalty in the framework from scratch, rather
   than reading it off the manuscript;
-* running the full test suite (625 fast tests pass; the slow statistical layer
-  was run separately);
+* running the full test suite — **625 fast tests and all 52 slow statistical
+  tests pass** (the slow layer takes 1h37m on this four-core machine, not the
+  advertised five minutes; see F12);
 * recomputing **all** of the manuscript's headline tables directly from
   `results/v3-production/full_results.csv`, without using
   `regimeshift.analysis`;
@@ -149,8 +150,8 @@ See F7 for what that does and does not license.
 
 ## 2. Findings
 
-Ordered by how much they should change what the work says about itself. None of
-them is a mathematical error.
+Twelve findings, ordered by how much they should change what the work says about
+itself. None of them is a mathematical error.
 
 **F1 — The README oversells the regression evidence.** `README.md` says the full
 and fundamental slopes are "the clearest evidence that an independently fitted
@@ -246,6 +247,16 @@ whatever array it was handed and its penalty from `geometry`, so a `(3, 4)` coun
 array scored against `BlockGeometry(6, 4)` returned a plausible score with
 `dimension_increment = 18` instead of 9. **Fixed in this branch**:
 `validate_block_pair` now guards all three block detectors, with tests.
+
+**F12 — The advertised slow-suite runtime is off by an order of magnitude.**
+`README.md` says `pytest -m slow` takes "~5 minutes on 4 cores". On an idle
+four-core machine it took **1 hour 36 minutes**, essentially all of it in the
+module-scoped grid fixture (4,532 s) and the split-fraction test (1,257 s). The
+arithmetic says the longer figure is the honest one: 160 configurations × 600
+datasets, each costing up to ten L-BFGS fits at `m = 6` — on the order of a
+million optimisations. Everything passes; only the estimate is wrong, and a
+contributor who trusts it will assume the run has hung. *Fix: quote a measured
+range, or note the hardware the five minutes was measured on.*
 
 ---
 
