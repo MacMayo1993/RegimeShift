@@ -85,6 +85,12 @@ independent regression written for this audit:
   are.
 * The README's worked example reproduces bit-for-bit
   (`gain=23.629 / 23.481 / 22.832`, `score=6.917 / 16.796 / 21.223`).
+* **The two selection tables** of §10 and §11 — which are *not* produced by the
+  production grid — regenerate exactly from `scripts/regenerate_selection_tables.py`,
+  every cell, including the paired-advantage table that withdraws Model D's
+  "middle band" claim (58/77/90%, 1/21/100%, 4/2/0%; and −0.31, +0.28, −0.18,
+  −2.55, −7.38 nats). This is the strongest provenance in the repository: the
+  script is deterministic and the manuscript quotes its output verbatim.
 * 936 detector rows = 312 configurations × 3; 312 × (500 + 1000) = 468,000
   datasets. The arithmetic in Table 2 is right.
 
