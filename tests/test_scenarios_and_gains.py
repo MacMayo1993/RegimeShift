@@ -216,3 +216,124 @@ def test_higher_mode_reproduces_the_manuscript_misspecification_pattern(m):
     assert gains["full"] > 0
     assert 0 < gains["fundamental"] < 0.1 * gains["full"]
     assert gains["shared_orbit"] < 0
+
+
+# ---------------------------------------------------------------------------
+# geometry of the fixed-distance scenario (Section 9.8)
+# ---------------------------------------------------------------------------
+
+
+def _nearest_nonidentity_orbit_distance(segments):
+    """Distance to the nearest orbit point the shared-orbit fit can reach.
+
+    Model C maximises over *nonidentity* shifts only, so that -- not the
+    distance to the full orbit including the identity -- is the signal it
+    cannot capture, and the quantity both scenarios are parameterised by.
+    """
+    from regimeshift.fourier import rotation_matrix
+
+    return min(
+        float(np.linalg.norm(segments.theta_right - rotation_matrix(segments.m, s) @ segments.theta_left))
+        for s in range(1, segments.m)
+    )
+
+
+@pytest.mark.parametrize("m", [2, 3, 4, 5, 6])
+def test_fixed_distance_scenario_hits_its_target_at_every_group_order(m):
+    from regimeshift.scenarios import INDEPENDENT_ORBIT_DISTANCE
+
+    segments = build_segments(m, "independent_fundamental_fixed_distance", 1.0)
+    assert _nearest_nonidentity_orbit_distance(segments) == pytest.approx(
+        INDEPENDENT_ORBIT_DISTANCE, abs=1e-9
+    )
+
+
+def test_original_scenario_slides_toward_an_orbit_as_m_grows():
+    """The defect Section 9.8 identifies: a fixed angular offset against a
+    shrinking one-step rotation. Pins the table it reports."""
+    expected = {3: 1.12, 4: 0.76, 5: 0.53, 6: 0.40}
+    for m, distance in expected.items():
+        segments = build_segments(m, "independent_fundamental", 1.0)
+        assert _nearest_nonidentity_orbit_distance(segments) == pytest.approx(distance, abs=0.005)
+
+
+@pytest.mark.parametrize("m", [3, 4, 5, 6])
+def test_a_same_radius_point_cannot_reach_the_target_distance(m):
+    """Why the fixed-distance variant must leave the left coordinate's circle.
+
+    The bound is ``2 sin(pi / 2m)`` -- the chord to the angular midpoint --
+    *not* half the adjacent-vertex chord ``2 sin(pi/m)``, which is the distance
+    to a point that does not lie on the circle at all. The two agree to 3% at
+    ``m = 6``, which is why the looser reading is easy to make; they differ by
+    13% at ``m = 3``.
+    """
+    from regimeshift.scenarios import INDEPENDENT_ORBIT_DISTANCE
+
+    angles = np.linspace(0.0, 2.0 * np.pi, 20001)
+    points = np.stack([np.cos(angles), np.sin(angles)], axis=1)
+    orbit = np.stack(
+        [[np.cos(2 * np.pi * k / m), np.sin(2 * np.pi * k / m)] for k in range(m)]
+    )
+    reachable = np.min(np.linalg.norm(points[:, None, :] - orbit[None, :, :], axis=2), axis=1).max()
+
+    assert reachable == pytest.approx(2 * np.sin(np.pi / (2 * m)), abs=1e-3)
+    assert reachable > np.sin(np.pi / m)          # the bound the text used to give
+    assert reachable < INDEPENDENT_ORBIT_DISTANCE  # so a unit radius cannot reach it
+
+
+@pytest.mark.parametrize("m", [3, 4, 5, 6])
+def test_the_midpoint_ray_floor_is_the_constraint_the_code_enforces(m):
+    """``sin(pi/m)`` is a real quantity here, just a different one: the minimum
+    distance along the angular-midpoint ray, minimised over radius. It is what
+    the scenario's discriminant requires the target to clear."""
+    from regimeshift.scenarios import build_segments as _build
+
+    radii = np.linspace(0.01, 6.0, 60001)
+    midpoint = np.array([np.cos(np.pi / m), np.sin(np.pi / m)])
+    distances = np.linalg.norm(radii[:, None] * midpoint[None, :] - np.array([1.0, 0.0]), axis=1)
+    assert distances.min() == pytest.approx(np.sin(np.pi / m), abs=1e-4)
+
+    with pytest.raises(ValueError, match="unreachable"):
+        import regimeshift.scenarios as sc
+
+        original = sc.INDEPENDENT_ORBIT_DISTANCE
+        try:
+            sc.INDEPENDENT_ORBIT_DISTANCE = np.sin(np.pi / m) * 0.9
+            _build(m, "independent_fundamental_fixed_distance", 1.0)
+        finally:
+            sc.INDEPENDENT_ORBIT_DISTANCE = original
+
+
+def test_holding_orbit_distance_fixed_does_not_hold_signal_strength_fixed():
+    """The corrected variant removes one confound and introduces a larger one.
+
+    Distance to the nearest orbit is constant by construction, but the size of
+    the change is not: the full population gain spans a factor of about 30
+    across group orders, against roughly 5 for the scenario it replaces. Any
+    cross-``m`` reading of either scenario is partly reading signal strength.
+    """
+    def full_gain_of(scenario, m):
+        segments = build_segments(m, scenario, 0.25)
+        return population_gains(segments.p_left, segments.p_right, m)["full"]
+
+    fixed = {m: full_gain_of("independent_fundamental_fixed_distance", m) for m in (2, 3, 4, 5, 6)}
+    original = {m: full_gain_of("independent_fundamental", m) for m in (2, 3, 4, 5, 6)}
+
+    assert max(fixed.values()) / min(fixed.values()) > 20.0
+    assert max(original.values()) / min(original.values()) < 10.0
+
+
+def test_higher_mode_residual_gain_is_not_uniformly_three_percent():
+    """Section 9.5 quotes "about 3% of the full gain" as though it held across
+    group orders. It is about 3% at ``m = 5, 6`` and nearly twice that at
+    ``m = 4``, where mode 2 is the one-dimensional sign representation."""
+    retained = {}
+    for m in (4, 5, 6):
+        segments = build_segments(m, "higher_mode", 0.25)
+        gains = population_gains(segments.p_left, segments.p_right, m)
+        retained[m] = gains["fundamental"] / gains["full"]
+        assert gains["shared_orbit"] < 0.0  # aligned pooling is worse than not aligning
+
+    assert retained[4] > 0.05
+    assert retained[5] == pytest.approx(0.031, abs=0.004)
+    assert retained[6] == pytest.approx(0.030, abs=0.004)

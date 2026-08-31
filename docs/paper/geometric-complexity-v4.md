@@ -32,7 +32,8 @@ penalty slopes were 1.488, 1.967 and 2.488 for $g=4,5,6$ against predictions
 1.5, 2.0 and 2.5. Fundamental-subspace slopes were 0.522 for $g=2$ and
 0.964–1.036 for $g=3$ through $g=6$, against predictions 0.5 and 1.0.
 Shared-orbit residual slopes ranged from $-0.228$ to $0.139$ against a
-structural prediction of zero. Under a common 5% null calibration the
+structural prediction of zero, several of them significantly so by their own
+standard errors. Under a common 5% null calibration the
 shared-orbit detector required approximately 31%, 37% and 39% fewer observations
 than the full detector on exact-orbit data for $g=4,5,6$. Under higher-mode
 misspecification the full detector retained high power while the constrained
@@ -157,7 +158,7 @@ comparison across a hierarchy of alternatives — but the objects overlap: the
 maximal invariant of $C_g$ acting on the fundamental subspace is exactly what
 Model C conditions on. Their framework is the most promising route to a
 sequential version of this comparison, one that would not depend on a known
-boundary or on two-part boundary coding; Section 14.8 develops the point.
+boundary or on two-part boundary coding; Section 14.9 develops the point.
 
 ---
 
@@ -323,15 +324,37 @@ conclusions materially. Section 11 reports the re-run and withdraws a claim that
 did not survive it.
 
 More generally, away from the Fisher reference point the identity-information
-approximation fails and the correct expression is
+approximation is no longer exact, and the correct expression is
 
 $$ \tfrac12 \log\det\!\big(I + \tau^2 J_{\mathrm{eff}}\big), $$
 
 with $J_{\mathrm{eff}}$ the Schur complement of the observed information. Fisher
 orthonormality holds *at* $\eta = 0$; it does not make the metric globally the
 identity. The isotropic formula above is the reduction of this at the reference
-point, and it is what the implementation uses; the discrepancy is $O(\|\eta\|^2)$
-and is a limitation recorded in Section 13.
+point, and it is what the implementation uses.
+
+The discrepancy is $O(\|\eta\|^2)$, for every group order, and the argument is
+short enough to give. Because $TB = BR$, the chart's information is equivariant,
+$I(R_\theta\eta) = R_\theta^{\top} I(\eta) R_\theta$. Writing
+$I(\eta) = I + A(\eta) + O(\|\eta\|^2)$ with $A$ linear, equivariance forces
+$A(R_\theta\eta) = R_\theta^{\top} A(\eta) R_\theta$. Split $A$ into trace and
+traceless parts. The trace part is a rotation-invariant *linear* functional on
+$\mathbb{R}^2$, hence identically zero for every $g \ge 2$. The traceless part
+transforms with weight $2$ while $\eta$ carries weight $1$, so it survives only
+when $3\theta \equiv 0$, that is only at $g = 3$.
+
+So the *metric* error is genuinely first order at $g=3$ and second order
+elsewhere. The *penalty* error is second order at every $g$, because
+$\tfrac12\log\det$ is blind to a traceless first-order perturbation: the Schur
+complement's first-order change satisfies
+$\operatorname{tr}\delta S = \kappa_1 \operatorname{tr}E_2 + \kappa_2 \operatorname{tr}E_1$
+(using $\operatorname{tr}(RER^{\top}) = \operatorname{tr}E$), and
+$\operatorname{tr}A \equiv 0$ by the trace argument above. Measured
+exponents over a decade in $\|\eta\|$, at $L_1 = L_2 = 1{,}200$ and $\tau = 0.15$:
+the metric gap scales as $2.00$ at $g = 2,4,5,6$ and as $1.00$ at $g=3$, while
+the penalty gap scales as $1.99$&ndash;$2.03$ at every $g$. Section 13 records the
+approximation as a limitation regardless, since second order is not zero and
+Model D's margins are of order a quarter of a nat.
 
 **A caveat belongs with this.** For any *fixed* $\tau > 0$ the leading
 coefficient is $d_{\mathrm{fund}}/2$ — Model B's rate, not an intermediate one.
@@ -453,8 +476,16 @@ and $p(R_g\eta)$ satisfies
 $$ \mathrm{JSD} \;\to\; \tfrac{1}{8}\,\big\|R_g\eta - \eta\big\|^2 \;=\; \frac{1-\cos(2\pi/g)}{4}\,\|\eta\|^2 , $$
 
 giving coefficients $1/2$, $3/8$ and $1/4$ for $g = 2, 3, 4$. No extra factor of
-$g$ appears when $\eta$ is measured in Fisher norm. This is verified numerically
-to a relative $3\times10^{-3}$.
+$g$ appears when $\eta$ is measured in Fisher norm.
+
+Verified numerically, and the tolerance is not uniform: at $\|\eta\| = 10^{-2}$
+the relative error is $3.5\times10^{-3}$ at $g = 3$ and
+$2.5\times10^{-5}$&ndash;$5.0\times10^{-5}$ at every other group order through
+$g = 8$ — two orders of magnitude smaller. The gap is the same representation-theoretic fact as in Section 3.4: the
+chart metric carries a nonzero *linear* term only at $g = 3$, so the cubic
+correction to the divergence is an order of magnitude larger there. Earlier
+versions quoted the $g = 3$ figure alone, as though it were a general numerical
+limit.
 
 ---
 
@@ -496,7 +527,7 @@ finite-sample residual length dependence.
 
 A BIC-scored unrestricted multinomial detector, so that all detectors are
 comparable through maximised likelihood plus explicit complexity increments. The
-penalty is the exact known-split increment with $d = g-1$. An exact
+penalty is the BIC/Laplace known-split increment with $d = g-1$. An exact
 KT/Dirichlet mixture implementation is *not* used; see Section 14.3.
 
 ## 7.2 Fundamental detector
@@ -504,7 +535,7 @@ KT/Dirichlet mixture implementation is *not* used; see Section 14.3.
 The null fits one coordinate $\eta$ to the combined counts; the alternative fits
 $\eta_1$ and $\eta_2$ separately. Optimisation is L-BFGS-B with analytic
 gradients in Cartesian Fourier coordinates and a smooth softmax map. The penalty
-is the exact known-split increment with $d = d_{\mathrm{fund}}$.
+is the BIC/Laplace known-split increment with $d = d_{\mathrm{fund}}$.
 
 ## 7.3 Shared-orbit detector
 
@@ -538,14 +569,47 @@ happens *at* the optimum: observed gradient norms are around $5\times10^{-8}$,
 giving roughly 2.5% false alarms if the flag is trusted. Judging convergence by a
 relative gradient criterion gives zero failures across the production grid.
 
-A second numerical property is worth recording. When a category has zero count —
-routine on short segments — the fundamental MLE does not exist: the likelihood
-rises toward the simplex boundary and is asymptotically flat along that
-direction. Different optimiser starts then halt at very different coordinates
-(observed $\|\eta\|$ of 8 versus 15) while agreeing on the log-likelihood to six
-decimals. Detector scores consume only likelihoods and are therefore
-start-independent, but a fitted *coordinate* from a short segment should not be
-interpreted.
+A second numerical property is worth recording, and an earlier statement of it
+was wrong in both halves. It said that a zero category count makes the
+fundamental MLE fail to exist, and that zero counts are routine on short
+segments. Neither holds.
+
+The fundamental family is a *linear* exponential family — the logits are
+confined to the column span of $B$ — so its sufficient statistic is
+$\bar t = \sum_j f_j B_j$ and, by the standard condition, the MLE exists exactly
+when $\bar t$ lies in the **interior** of $\mathrm{conv}\{B_1,\dots,B_g\}$. That
+hull is the regular $g$-gon on the $B_j$, and every proper face of a regular
+polygon is spanned by cyclically *adjacent* vertices. The criterion is therefore
+decidable from the support alone, in $O(g)$:
+
+> **Proposition 2 (existence).** For $g = 2$ the MLE exists iff both categories
+> have positive count. For $g \ge 3$ it exists iff the empirical support is
+> contained in neither a single category nor a pair of cyclically adjacent
+> categories.
+
+A zero cell is thus neither necessary nor sufficient once $g \ge 3$. At $g = 4$,
+$(0,10,10,10)$ has an ordinary interior optimum at $\|\hat\eta\| = 0.490$, and so
+does $(10,0,10,0)$ with *two* empty cells, at $\hat\eta = 0$, because opposite
+vertices span no face. What genuinely fails is $(10,10,0,0)$: an adjacent pair
+carrying all the mass puts $\bar t$ on an edge, and the likelihood is
+asymptotically flat along the escape direction — numerically
+$\hat\ell(4\hat\eta) = \hat\ell(\hat\eta)$ to machine precision, which is why
+different optimiser starts halt at very different coordinates while agreeing on
+the log-likelihood. The blanket claim happens to be correct at $g = 2$, where the
+hull is a segment and both endpoints are faces; that is presumably where it came
+from.
+
+Zero counts are also not routine here. The shortest segment on the production
+grid is 100 observations and the smallest cell probability anywhere on the grid
+is $0.091$, so the worst configuration's probability of an empty cell is
+$7.2\times10^{-5}$; summed over the design with each configuration's own lengths
+and draw counts, the expected number of zero-cell segments across all 936,000 the
+run scores is $0.2$. And a zero cell would not be the problem even then: at that
+same corner a genuine failure of Proposition 2 needs the whole segment inside two
+adjacent cells, and no adjacent pair there carries more than $0.43$ of the mass,
+bounding it by $10^{-37}$. Detector scores consume only likelihoods and are start-independent either way, since the
+supremum is finite even when unattained; what should not be interpreted is a
+fitted *coordinate* when Proposition 2 fails.
 
 ## 7.6 Structural validation
 
@@ -678,11 +742,17 @@ Under variance weighting the agreement is within 0.018.
 | 6 | 1.010 | 1.036 | 1.017 | 1.000 | 0.99973 |
 
 The coefficients remain approximately constant from $g=3$ through $g=6$ even
-though the full-simplex dimension grows from two to five. **This is the clearest
-direct evidence that an independently fitted fundamental family obeys a
-different complexity law from the unrestricted multinomial family.** For $g=2$
-and $g=3$ the model spaces coincide, since $d_{\mathrm{fund}} = g-1$ there; the
-informative separation begins at $g=4$.
+though the full-simplex dimension grows from two to five. Read this in the terms
+Section 8.3 sets: the penalty is *inserted* into the score, so the fitted slope
+is $\Delta d/2 - s$ and the regression measures the gain residual $s$. **What the
+constancy establishes is that $s$ stays small for the fundamental family as the
+full-simplex dimension grows** — the two families are prescribed different
+complexity laws, and the finite-sample corrections do not obscure either one over
+the tested range. It is a compatibility check on the implementation, not
+independent evidence that the laws differ; that would need a fully specified
+universal code, which Section 14.3 lists and this paper does not implement. For
+$g=2$ and $g=3$ the model spaces coincide, since $d_{\mathrm{fund}} = g-1$ there;
+the informative separation begins at $g=4$.
 
 ## 9.3 Shared exact-orbit penalty
 
@@ -697,7 +767,17 @@ informative separation begins at $g=4$.
 | 6 | 1.004 | 0.122 | 0.179 | 0 |
 
 These residuals are far below the fundamental and full coefficients but are not
-uniformly zero. The evidence supports the qualified statement:
+uniformly zero, and by the run's own standard errors several are not close to
+zero either. Under variance weighting, which Section 8.3 prefers on this design,
+the distances from the structural prediction are $1.6$, $1.4$, $3.7$, $4.3$ and
+$8.0$ standard errors for $g = 2$ through $6$ — $0.179 \pm 0.022$ at $g=6$. The
+ordinary fit ranks them differently ($2.7$ at $g=2$, $3.2$ at $g=6$) but agrees
+that the largest are real. Calling this "small drift" understates it. The decomposition below is what
+makes the significance informative rather than alarming — these residuals are the
+maximised-likelihood gain's finite-sample behaviour and nothing else — but a
+reproducible eight-sigma departure is a quantified target for the singular
+analysis of Section 14.5, not noise to be set aside. The evidence supports the
+qualified statement:
 
 > The shared exact-orbit detector has a near-zero leading logarithmic coefficient
 > relative to the regular split models, while finite-sample score behaviour
@@ -719,19 +799,21 @@ continuous-dimension penalty. This settles a question left open in v3.1.
 ## 9.4 Calibrated crossover advantage
 
 **Table 6.** Median calibrated 50%-power crossover-length ratios, exact-orbit
-data. A ratio below one favours the numerator.
+data. A ratio below one favours the numerator. $n$ is the number of the four
+effect levels at which *both* detectors cross inside the grid, and so the number
+of points the median is taken over.
 
 Intervals are 95% bootstrap percentile intervals over 500 replications of the
 whole pipeline — power draw, monotone stabilisation, interpolation and median
 across effects.
 
-| $g$ | shared / full | shared / fundamental | fundamental / full |
-|---:|---:|---:|---:|
-| 2 | 0.758 [0.695, 0.814] | 0.758 [0.701, 0.821] | 1.000 [0.916, 1.098] |
-| 3 | 0.788 [0.725, 0.856] | 0.788 [0.725, 0.853] | 1.000 [0.926, 1.094] |
-| 4 | 0.687 [0.646, 0.764] | 0.842 [0.782, 0.911] | 0.819 [0.758, 0.909] |
-| 5 | 0.630 [0.560, 0.726] | 0.838 [0.772, 0.903] | 0.745 [0.687, 0.826] |
-| 6 | 0.608 [0.560, 0.647] | 0.852 [0.787, 0.896] | 0.708 [0.656, 0.772] |
+| $g$ | shared / full | $n$ | shared / fundamental | $n$ | fundamental / full | $n$ |
+|---:|---:|---:|---:|---:|---:|---:|
+| 2 | 0.758 [0.695, 0.814] | 2 | 0.758 [0.701, 0.821] | 2 | 1.000 (exactly) | 2 |
+| 3 | 0.788 [0.725, 0.856] | 2 | 0.788 [0.725, 0.853] | 2 | 1.000 (exactly) | 3 |
+| 4 | 0.687 [0.646, 0.764] | 3 | 0.842 [0.782, 0.911] | 3 | 0.819 [0.758, 0.909] | 3 |
+| 5 | 0.630 [0.560, 0.726] | 3 | 0.838 [0.772, 0.903] | 3 | 0.745 [0.687, 0.826] | 4 |
+| 6 | 0.608 [0.560, 0.647] | 4 | 0.852 [0.787, 0.896] | 4 | 0.708 [0.656, 0.772] | 4 |
 
 For exact-orbit data the shared detector required approximately 31%, 37% and 39%
 fewer observations than the full detector for $g = 4,5,6$. Stated with the
@@ -755,6 +837,26 @@ this cuts the other way and makes the intervals conservative. Doing it properly
 requires the per-dataset detector outcomes, which the summary grid does not
 retain; a joint bootstrap is the natural next revision of this analysis.
 
+**How conservative, measured on this grid.** At $g = 2$ and $g = 3$ the
+fundamental component is the whole nontrivial tangent space, so `full` and
+`fundamental` are one detector scoring one set of datasets: in the committed run
+their calibrated power is *equal* at every design point and their mean scores
+agree to $10^{-11}$. The `fundamental/full` ratio is therefore identically $1$
+with no variance. Resampling the two independently nonetheless produced
+$[0.916, 1.098]$ and $[0.926, 1.094]$, and gave two different intervals —
+$[0.695, 0.814]$ and $[0.701, 0.821]$ at $g=2$ — for `shared/full` and
+`shared/fundamental`, which are there the same number. Earlier versions read
+those rows as a check that passed ("as they must when the two models coincide");
+they are better read as a direct measurement of the artefact, putting it at about
+$\pm 9\%$ on the rows that do carry content. Table 6 now reports the degenerate
+ratios as exact.
+
+*The bootstrap does not resample one estimator.* A replicate whose crossover
+falls outside the grid drops that effect from *its* median, so the effect subset
+varies across replicates and the distribution mixes medians of different
+estimators. Freezing the subset to the point estimate's would fix it and would
+change the intervals reported here.
+
 *A substantial minority of crossovers fall outside the grid.* Of 156 (group,
 effect, detector) crossover estimates, 112 are interior, 25 lie above the longest
 simulated length and 19 below the shortest. Only interior estimates enter the
@@ -762,6 +864,13 @@ medians. The excluded cases are not missing at random — they concentrate in th
 weakest effects (below grid) and in the constrained detectors at large $g$ under
 strong effects (above grid) — so the medians describe the interior of the design,
 not the whole of it.
+
+The $n$ column of Table 6 shows what that costs: at $g = 2$ and $g = 3$ a "median
+across effects" is the midpoint of two numbers. And because each column keeps its
+own surviving subset, the columns do not compose — at $g=5$ the reported
+shared/full is $0.630$ while (shared/fundamental) $\times$ (fundamental/full) is
+$0.624$, and similarly $0.608$ against $0.603$ at $g=6$. The three columns are
+each defensible; they are not three views of one consistent set of crossovers.
 
 The cumulative-maximum stabilisation of the power curves is defensible, since
 true power is monotone in length, but it is one choice among several; isotonic
@@ -810,20 +919,69 @@ were:
 | fundamental | 0.0090 | 0.063 |
 | shared orbit | **0.0531** | **0.281** |
 
-with the worst cases at $g = 2$, short segments and weak effects. This is the
-same singular qualification as Section 6.3 — the relative label is unidentifiable
-at orbit collapse — and it is precisely why every power comparison in this paper
-is made at a **common calibrated 5%** rather than by raw rule. Any performance
-claim stated on raw scores would be reading threshold generosity as detection
-ability.
+The worst cases are at short segments and weak effects — the corner nearest orbit
+collapse — but **not at $g = 2$**, as earlier versions of this section said. The
+worst single row is $g = 3$, `independent_fundamental`, effect $0.08$,
+$L = 200$, and $g = 2$ has the *lowest* mean null rate of any group order:
+
+| $g$ | mean | worst |
+|---:|---:|---:|
+| 2 | 0.0384 | 0.275 |
+| 3 | **0.0590** | **0.281** |
+| 4 | 0.0570 | 0.208 |
+| 5 | 0.0550 | 0.177 |
+| 6 | 0.0532 | 0.139 |
+
+So the effect is not driven by $g=2$'s label cost being exactly zero; it eases as
+$g$ grows. It is the singular qualification of Section 6.3 — the relative label is
+unidentifiable at orbit collapse, at every group order — and it is precisely why
+every power comparison in this paper is made at a **common calibrated 5%** rather
+than by raw rule. Any performance claim stated on raw scores would be reading
+threshold generosity as detection ability.
+
+**The label convention is nonetheless doing some of the damage.** Model C's
+alternative ranges over nonidentity shifts only, so it is not a proper extension
+of its own null, and $\log(g-1)$ is not the only defensible constant: a code that
+encodes $r$ uniformly over all $g$ elements, identity included, pays $\log g$.
+Recoding that way at effect $0.08$ and 100 observations per side, over 4,000
+trials at the base seed
+(`tests/test_statistical_validation.py::test_including_the_identity_in_the_label_code_cuts_the_raw_null_rate`):
+
+| $g$ | $\log(g-1)$, as implemented | $\log g$, identity included |
+|---:|---:|---:|
+| 2 | 0.289 | 0.119 |
+| 3 | 0.272 | 0.182 |
+| 4 | 0.223 | 0.160 |
+| 6 | 0.125 | 0.101 |
+
+A large reduction — 59% of the excess at $g=2$, falling to 19% at $g=6$ — that
+never reaches nominal at any group order. So the convention is responsible for a
+substantial part of the problem at small $g$ and not for the rest of it, which is
+the sharper form of the argument for calibration and a concrete instance of the
+$O(1)$ sensitivity Section 10 flags.
 
 ## 9.7 The split fraction affects only the bounded term
 
 Section 4.2 predicts that $\rho$ moves the bounded term $\tfrac{d}{2}\log[\rho(1-\rho)]$
-while leaving the $\log L$ coefficient at $d/2$. Repeating the $g = 4$ full-detector
+while leaving the $\log L$ coefficient at $d/2$. Running the $g = 4$ full-detector
 regression at a balanced split and at $\rho = 0.25$ gives slopes of 1.404 and
-1.519 against a prediction of 1.5. The prediction holds; this is the first time
-it has been checked.
+1.519 against a prediction of 1.5.
+
+Two qualifications, because this is the one section whose numbers are not from
+the committed run. The production grid holds $\rho = 0.5$ throughout; these
+figures come from `tests/test_statistical_validation.py::test_penalty_slope_is_invariant_to_the_split_fraction`,
+on exact-orbit rather than higher-mode data, over five segment lengths rather
+than six, at 300 trials per cell rather than 500 and 1,000, and with an
+acceptance band of $\pm 0.3$. That design difference, not a drift in $\rho$, is
+why 1.404 sits further from 1.5 than Table 3's 1.488 for nominally the same
+detector and group order. Adding $\rho$ to the production grid and committing the
+run would remove the discrepancy.
+
+And note what is being checked. The $\rho(1-\rho)$ decomposition of Section 4.2 is
+algebraically exact — it is a rearrangement, machine-checked in `Penalty.lean` —
+so no simulation can falsify it. What the two regressions test is that the gain
+residual $s$ of Section 9.3 picks up no $\rho$-dependent $\log L$ structure of its
+own. That is a real check, and a narrower one than "the prediction holds".
 
 ## 9.8 A defect in the independent-fundamental scenario
 
@@ -849,12 +1007,45 @@ placing the right coordinate at the angular midpoint between adjacent orbit
 points and solving the radius. On it the selector of Section 10 recovers the
 fundamental model 100% of the time at every group order.
 
+**That variant is not confound-free either, and the replacement confound is
+larger.** With one free radius there is only one constraint to spend, so fixing
+the distance to the orbit lets the size of the change run: at effect $0.25$ the
+full population gain ranges from $0.0019$ at $g=2$ to $0.0573$ at $g=4$, a factor
+of 30, against roughly 5 for the drift the variant was introduced to remove. At
+$g \ge 3$ the change is about fifteen times stronger than in the original
+scenario, which is most of why the selector recovers the fundamental model
+without error; at $g = 2$ it runs the other way, the right state landing $0.50$
+effects from the left one rather than $1.55$. The original scenario has the
+mirror-image problem, its change size being near-constant at $0.655$ effects for
+$g \ge 3$ but $1.55$ at $g = 2$. Holding both quantities fixed across $g$ needs a
+second free parameter, which neither scenario has, so **neither supports a
+cross-$g$ comparison** and the corrected variant should be read as a check that
+the selector is not fooled at a fixed distance, not as a $g$-comparison.
+
+Distances here and in the table above are to the nearest **nonidentity** orbit
+point, which is the signal a shared-orbit fit cannot capture and so the quantity
+that matters. At $g \ge 3$ the identity is never the nearest point; at $g = 2$ it
+is.
+
 Holding the distance constant necessarily takes the right coordinate off the left
-one's radius, and increasingly so with $g$. That is forced rather than chosen:
-adjacent orbit points sit $2\sin(\pi/g)$ apart, so on a circle of the same radius
-no point can be more than $\sin(\pi/g)$ from all of them — only 0.5 effects at
-$g = 6$. **No fixed radius ratio in the original parameterisation could have held
-the distance constant.**
+one's radius, and increasingly so with $g$. That is forced rather than chosen,
+though two different bounds are in play and an earlier version of this section
+conflated them.
+
+On the *same circle* as the left coordinate, the furthest any point can sit from
+every orbit point is the chord to the angular midpoint, $2\sin(\pi/2g)$ — not half
+the adjacent-vertex chord $2\sin(\pi/g)$, since a chord's midpoint is not itself
+on the circle. That is $1.000$ effects at $g=3$ and $0.518$ at $g=6$; the two
+readings agree to 3% at $g=6$, which is why the looser one survived. Either way
+a unit radius cannot reach $1.5$, so the right coordinate must leave that circle.
+And **no fixed radius ratio could have held the distance constant**, because the
+radius solving $r^2 - 2r\cos(\pi/g) + 1 = d^2$ depends on $g$.
+
+Separately, $\sin(\pi/g)$ *is* a real quantity in this construction: minimising
+over radius along the midpoint ray rather than maximising over the circle, it is
+the smallest distance that ray can achieve, attained at $r = \cos(\pi/g)$. It is
+the feasibility floor the implementation enforces — a target below it makes the
+discriminant negative and the scenario undefined.
 
 ## 9.9 Relative-shift recovery
 
@@ -1093,11 +1284,14 @@ has not been performed.**
    the isotropic reduction $\tfrac{d_{\mathrm{fund}}}{2}\log(1 + \tau^2 J_{\mathrm{eff}})$
    rather than $\tfrac12\log\det(I + \tau^2 J_{\mathrm{eff}})$ with the observed
    information. Fisher orthonormality holds at $\eta = 0$ only, so the two differ
-   at $O(\|\eta\|^2)$. Measured against brute-force marginalisation at $g=2$,
-   $\tau = 0.15$, the isotropic form is within 0.003 nats at $\eta = 0$ and
+   away from it; Section 3.4 derives the order as $O(\|\eta\|^2)$ at every $g$,
+   which needs the observation that the chart metric's linear term is traceless
+   (and, at $g \neq 3$, zero). Measured against brute-force marginalisation at
+   $g=2$, $\tau = 0.15$, the isotropic form is within 0.003 nats at $\eta = 0$ and
    about 0.03 nats out at $\|\eta\| = 0.3$; the observed-information form is
-   within 0.002 nats at both. Since Model D's conclusions live in bounded terms
-   of order a quarter of a nat, this is not negligible.
+   within 0.002 nats at both. Second order is not zero, and since Model D's
+   conclusions live in bounded terms of order a quarter of a nat, this is not
+   negligible.
 5. **Singularity at orbit collapse.** The two-part code establishes the absence
    of an added continuous vector but does not derive the exact singular
    marginal-likelihood expansion.
@@ -1148,28 +1342,47 @@ with a stopping time, raising average run length under the null, expected
 detection delay under each geometric alternative, and the cost of repeatedly
 searching over both boundary locations and relative group elements.
 
-**14.5 Singular analysis at orbit collapse.** Computing or bounding the relevant
-real log canonical threshold would replace the qualified statement of Section 9.3
-with a theorem. The most direct route is a local analysis along
-$\eta_L = h/\sqrt{L}$, or a related triangular array, which interpolates between
-the regular orbit behaviour of Proposition 1 and the collapsed stratum, and would
-explain the $g = 2$ null behaviour of Section 9.6 rather than merely describing
-it.
+**14.5 Singular analysis at orbit collapse.** *The highest-value extension.*
+Computing or bounding the relevant real log canonical threshold would replace the
+qualified statement of Section 9.3 with a theorem. The most direct route is a
+local analysis along $\eta_L = h/\sqrt{L}$, or a related triangular array, which
+interpolates between the regular orbit behaviour of Proposition 1 and the
+collapsed stratum.
+
+It is ranked first because three separate reported anomalies are the same
+phenomenon and all sit on that stratum: the raw null rates of Section 9.6, worst
+in the weak-effect short-segment corner at every $g$; the residual slopes of
+Section 9.3, up to eight standard errors from zero and already a quantified
+target; and $g=2$'s label cost of exactly zero. Proposition 1 is a theorem about
+regular orbits, and the results keep landing where it does not apply.
 
 **14.6 A complete cross-model code.** Section 10's selection procedure is only as
 sound as its $O(1)$ convention. Replacing the BIC/Laplace lengths with normalised
 maximum likelihood where it is well defined, an explicit prequential code, or
 Bayesian marginal likelihoods under stated priors would make the cross-model
 comparison genuinely absolute and would put the Model C and Model D margins — the
-ones that live entirely in bounded terms — on a firm footing. This is the single
-highest-value extension for the selection results.
+ones that live entirely in bounded terms — on a firm footing. This is the
+highest-value extension *for the selection results specifically*.
 
-**14.7 A data-chosen $\tau$.** Model D's prior width is fixed at $0.05$
+Model C's label code is the concrete case. Its alternative excludes the identity,
+so it is not a proper extension of its own null and $\log(g-1)$ is one convention
+among several; Section 9.6 measures what switching to $\log g$ does to the raw
+null rate, and the answer is a large fraction of the excess at small $g$. A
+complete code would settle the constant rather than choosing it.
+
+**14.7 A joint crossover bootstrap.** The intervals of Section 9.4 resample each
+detector independently although they score the same datasets, and their $g=2$ and
+$g=3$ rows measure the resulting inflation at about $\pm 9\%$ on a quantity that
+is identically one. Retaining per-dataset detector outcomes in the runner — a
+small change — would allow a paired resample and remove the artefact, and would
+also let the replicate-level effect subset be frozen rather than varying with it.
+
+**14.8 A data-chosen $\tau$.** Model D's prior width is fixed at $0.05$
 throughout. Estimating $\tau$ from the data, at the cost of encoding it, is the
 natural way to ask whether Model D's narrow advantage (Section 11) widens into
 something worth the extra model class.
 
-**14.8 Relation to group-invariant e-testing.** The e-statistics of
+**14.9 Relation to group-invariant e-testing.** The e-statistics of
 Pérez-Ortiz et al. [18] ask a different question — anytime-valid testing between
 two group models, with the likelihood ratio of the maximal invariant as the
 growth-rate-optimal statistic. But that machinery is a plausible route to a
@@ -1191,8 +1404,9 @@ a two-part structural code on a regular orbit stratum.
 
 The Monte Carlo results are consistent with the full and independent-fundamental
 coefficients to within 0.03, and with a near-zero leading coefficient for the
-shared exact-orbit detector, while revealing finite-sample residuals that an exact or
-singular coding analysis would be needed to explain. The decomposition
+shared exact-orbit detector, while revealing finite-sample residuals — several of
+them many standard errors from zero — that an exact or singular coding analysis
+would be needed to explain. The decomposition
 $\text{slope} = \Delta d/2 - s$ localises those residuals in the likelihood gain
 rather than in any hidden penalty. Under matched geometry the constrained
 detectors reduce required sample length; under higher-mode misspecification the
@@ -1342,8 +1556,27 @@ to equal the raw MDL coefficient.
 | Crossover **confidence intervals reported**, not merely mentioned | 9.4 |
 | **Out-of-grid crossover counts reported** (44 of 156 excluded) | 9.4 |
 | Speculative geometric bridge **moved out of the main argument** | App. D |
-| Extensions added: complete cross-model code, data-chosen $\tau$, local $h/\sqrt{L}$ analysis, e-testing link | 14.5–14.8 |
+| Extensions added: complete cross-model code, data-chosen $\tau$, local $h/\sqrt{L}$ analysis, e-testing link | 14.5–14.9 |
 | Limitation added: identity-information approximation in Model D, with measured size | 13 |
+
+**Changes made in response to a second technical review of the version-4 draft.**
+All are corrections to statements *about* the results; no detector, penalty,
+scenario or committed number changed.
+
+| Change | Section |
+|---|---|
+| Model D's $O(\|\eta\|^2)$ discrepancy **derived** rather than asserted or withdrawn: metric equivariance forces the linear term's trace to vanish at every $g$, and $\tfrac12\log\det$ is blind to the traceless remainder | 3.4, 13 |
+| §5.4's JSD tolerance restated per group order — the quoted $3\times10^{-3}$ was the $g=3$ figure, the same first-order metric term | 5.4 |
+| Zero-count claim **replaced by Proposition 2**, an $O(g)$ existence criterion; "routine on short segments" withdrawn — the expected number of zero-cell segments over the whole run is $0.2$ | 7.5 |
+| §9.8's same-radius bound corrected from $\sin(\pi/g)$ to $2\sin(\pi/2g)$; $\sin(\pi/g)$ identified as the midpoint-ray floor it actually is | 9.8 |
+| Fixed-distance scenario's own confound reported: holding orbit distance fixed lets the population gain span 30× across $g$ | 9.8 |
+| §9.6's attribution corrected — the worst raw null rates are at $g=3$, and $g=2$ has the lowest mean; $\log g$ comparison added | 9.6 |
+| §9.2 brought into line with §8.3: the slope regressions measure the gain residual, not the complexity law | 9.2 |
+| Residual-slope significance reported ($8.0$ s.e. at $g=6$) instead of "small drift" | 9.3, abstract |
+| Table 6 reports $n$ per cell, degenerate ratios given as exact, and the independent-resampling artefact quantified from the $g=2,3$ rows | 9.4 |
+| §9.7's provenance stated: a different scenario, grid and trial count, with a $\pm0.3$ band, and not part of the committed run | 9.7 |
+| "Exact known-split increment" renamed in §7.1, §7.2 and `split_penalty` — the §4.2 rename had not been carried through | 7.1, 7.2 |
+| Singular analysis promoted above the cross-model code; joint bootstrap added | 14.5–14.7 |
 
 ---
 

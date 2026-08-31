@@ -88,6 +88,26 @@ HIGHER_MODE_FACTOR = 0.85
 #: This variant holds the distance fixed instead. 1.5 sits firmly in Model B's
 #: territory: the README's deviation sweep puts the approximate-orbit code ahead
 #: from roughly 0.5 to 1.0, and Model B ahead beyond about 1.5.
+#:
+#: Two things to know before reading results off this scenario.
+#:
+#: *The distance is to the nearest* **nonidentity** *orbit point*, which is the
+#: signal a shared-orbit fit cannot capture, and so the quantity that matters.
+#: At ``m >= 3`` the identity is never the nearest point anyway; at ``m = 2`` it
+#: is, so the right coordinate sits 0.5 effects from the left one and 1.5 from
+#: its flip.
+#:
+#: *Fixing the orbit distance does not fix the size of the change.* It cannot:
+#: with one free radius there is only one constraint to spend. Holding the
+#: distance at 1.5 lets ``|theta_R - theta_L|`` run from 0.50 effects at
+#: ``m = 2`` to 2.83 at ``m = 4``, and the full population gain from 0.0019 to
+#: 0.0573 -- a 30x spread, against roughly 5x for the drift this variant was
+#: introduced to remove. So it trades one confound for a larger one, and any
+#: cross-``m`` comparison on it is reading signal strength, not geometry. The
+#: original ``independent_fundamental`` has the mirror-image problem: its change
+#: size is near-constant for ``m >= 3`` (0.655 effects) but 1.55 at ``m = 2``.
+#: Holding both quantities fixed needs a second free parameter, which neither
+#: scenario has.
 INDEPENDENT_ORBIT_DISTANCE = 1.5
 
 #: Machine-readable provenance for each scenario constant taken from the source
@@ -226,11 +246,21 @@ def build_segments(m: int, scenario: str, effect: float, deviation: float = 0.0)
         # INDEPENDENT_ORBIT_DISTANCE effects.
         #
         # The radius must exceed the left one, and increasingly so with m. That
-        # is forced, not a choice: adjacent orbit points sit 2 sin(pi/m) apart,
-        # so on a circle of the same radius no point can be further than
-        # sin(pi/m) from all of them -- only 0.5 effects at m = 6. Holding the
-        # distance constant therefore requires leaving that circle, which is
-        # also why the manuscript's fixed radius ratio could not have held it.
+        # is forced, not a choice. Two distinct bounds are in play and they are
+        # easy to conflate:
+        #
+        #   * on the *same* circle as the left coordinate, the furthest any
+        #     point can be from every orbit point is 2 sin(pi / 2m) -- the
+        #     chord to the angular midpoint, not half the adjacent-vertex chord
+        #     2 sin(pi/m). That is 1.000 effects at m = 3 and 0.518 at m = 6,
+        #     so a unit radius can never reach INDEPENDENT_ORBIT_DISTANCE;
+        #   * along the midpoint *ray*, minimising over radius instead, the
+        #     floor is sin(pi/m) -- attained at radius cos(pi/m). That is the
+        #     bound the discriminant below enforces.
+        #
+        # Holding the distance constant therefore requires leaving the left
+        # coordinate's circle, which is also why no fixed radius ratio could
+        # have held it: the required radius depends on m.
         target = INDEPENDENT_ORBIT_DISTANCE
         if m == 2:
             # d = 1: the only orbit point is -theta_L, so |rho + 1| = target.

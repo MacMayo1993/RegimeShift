@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from .detectors import K_STAR, nats_to_bits
-from .simulation import BASE_SEED
+from .simulation import BASE_SEED, DETECTION_PATTERNS, DETECTOR_NAMES
 
 __all__ = [
     "PREDICTED_SLOPES",
@@ -347,6 +347,28 @@ def crossover_bootstrap(
     relevant tail. And detectors are resampled independently although they score
     the *same* simulated datasets and are positively correlated, which makes the
     ratio intervals conservative (too wide) rather than optimistic.
+
+    **How wide, measurably.** The second limitation is not a mild conservatism,
+    and the grid contains its own calibration. At ``m = 2`` and ``m = 3`` the
+    fundamental component spans the whole nontrivial tangent space, so ``full``
+    and ``fundamental`` are the same detector scoring the same datasets: in the
+    committed run their calibrated power agrees *exactly* at every design point.
+    The ``fundamental/full`` ratio is therefore identically 1 with zero
+    variance -- and :func:`crossover_ratio_bootstrap`, which resamples the same
+    way, reports [0.916, 1.098] at ``m = 2`` and [0.926, 1.094] at ``m = 3``,
+    because it draws two independent binomials from one shared power curve.
+    A second symptom in the same row: at ``m = 2``
+    ``shared_orbit/full`` gets [0.695, 0.814] while ``shared_orbit/fundamental``
+    gets [0.701, 0.821], two intervals for what is mathematically one number.
+
+    Read that +-9% as the measured inflation on the rows that carry real
+    content, and do not read the ``m = 2, 3`` rows as a passed check. Removing
+    it needs a *joint* resample of per-dataset detector outcomes, which
+    :mod:`regimeshift.simulation` does not currently retain; that is the natural
+    next revision of this analysis, and it is a change to the runner rather than
+    to this function. ``tests/test_committed_results.py`` pins both the
+    degeneracy and the width of the interval it produces, so the artefact
+    cannot be mistaken for a result.
     """
     rng = np.random.default_rng(seed)
     lo_q, hi_q = (1.0 - ci) / 2.0, 1.0 - (1.0 - ci) / 2.0
@@ -383,6 +405,104 @@ def crossover_bootstrap(
     return pd.DataFrame(rows).sort_values(["m", "scenario", "effect", "detector"]).reset_index(drop=True)
 
 
+def _has_joint_patterns(results: pd.DataFrame) -> bool:
+    """Whether the joint detection-pattern columns are present and consistent.
+
+    They are checked rather than trusted: the four patterns that set a
+    detector's bit must sum to that detector's reported ``power_calibrated``.
+    A results file written before the columns existed, or one whose marginals
+    disagree with its patterns, falls back to independent resampling.
+    """
+    if not set(DETECTION_PATTERNS).issubset(results.columns):
+        return False
+    counts = results[list(DETECTION_PATTERNS)].to_numpy(dtype=float)
+    if not np.allclose(counts.sum(axis=1), results["n_alt"].to_numpy(dtype=float)):
+        return False
+    for index, detector in enumerate(DETECTOR_NAMES):
+        rows = results["detector"] == detector
+        if not rows.any():
+            continue
+        marginal = counts[rows.to_numpy()][:, _pattern_mask(index)].sum(axis=1)
+        reported = results.loc[rows, "power_calibrated"].to_numpy(dtype=float)
+        if not np.allclose(marginal / results.loc[rows, "n_alt"].to_numpy(float), reported):
+            return False
+    return True
+
+
+def _pattern_mask(detector_index: int) -> np.ndarray:
+    """Indices of the patterns in which ``detector_index`` detects."""
+    return np.array(
+        [i for i, name in enumerate(DETECTION_PATTERNS)
+         if name.split("_")[1][detector_index] == "1"]
+    )
+
+
+def _joint_power_sampler(group: pd.DataFrame, effects: np.ndarray, paired: bool):
+    """Build a closure drawing one bootstrap replicate of every power curve.
+
+    When ``paired``, each configuration gets a single multinomial draw over the
+    eight joint outcome triples and all three detector powers are read off it,
+    so the detectors move together exactly as they do in the data. Otherwise
+    each detector's power is drawn from its own binomial, which is the older
+    behaviour and treats them as independent.
+    """
+    configs = {}
+    for (effect, length), sub in group.groupby(["effect", "total_length"]):
+        first = sub.iloc[0]
+        entry = {
+            "n_alt": int(first["n_alt"]),
+            "power": {row["detector"]: float(row[power_col])
+                      for _, row in sub.iterrows()
+                      for power_col in ["power_calibrated"]},
+        }
+        if paired:
+            counts = first[list(DETECTION_PATTERNS)].to_numpy(dtype=float)
+            entry["probs"] = counts / counts.sum()
+        configs[(float(effect), int(length))] = entry
+
+    keys = sorted(configs)
+
+    def draw(rng: np.random.Generator) -> dict[tuple[float, str], np.ndarray]:
+        by_curve: dict[tuple[float, str], list[tuple[int, float]]] = {}
+        for key in keys:
+            entry = configs[key]
+            n_alt = entry["n_alt"]
+            if paired:
+                counts = rng.multinomial(n_alt, entry["probs"])
+                powers = {
+                    name: counts[_pattern_mask(i)].sum() / n_alt
+                    for i, name in enumerate(DETECTOR_NAMES)
+                }
+            else:
+                powers = {
+                    name: rng.binomial(n_alt, min(max(p, 0.0), 1.0)) / n_alt
+                    for name, p in entry["power"].items()
+                }
+            for name, value in powers.items():
+                by_curve.setdefault((key[0], name), []).append((key[1], value))
+        return {
+            curve: np.array([value for _, value in sorted(points)])
+            for curve, points in by_curve.items()
+        }
+
+    return draw
+
+
+def _crossings_from_power(curves, powers, target):
+    """Interpolate a crossover for every curve that has one inside the grid."""
+    crossings: dict[tuple[float, str], float] = {}
+    for key, sub in curves.items():
+        if key not in powers:
+            continue
+        lengths = sub["total_length"].to_numpy(dtype=float)
+        value, status = _interpolate_crossover(
+            lengths, np.clip(powers[key], 0.0, 1.0), target
+        )
+        if status == "internal" and np.isfinite(value):
+            crossings[key] = value
+    return crossings
+
+
 def crossover_ratio_bootstrap(
     results: pd.DataFrame,
     scenario: str = "exact_orbit",
@@ -401,12 +521,46 @@ def crossover_ratio_bootstrap(
 
     The full pipeline -- resample power, interpolate crossovers, take the median
     ratio across effects -- is repeated, so the interval covers interpolation
-    and median-across-effects variability as well as binomial noise. See
-    :func:`crossover_bootstrap` for what it still does not cover.
+    and median-across-effects variability as well as binomial noise.
+
+    **Detectors are resampled jointly.** Every alternative dataset is scored by
+    all three detectors, so their calibrated outcomes are strongly positively
+    correlated, and resampling each detector's power from its own marginal
+    binomial throws that correlation away. On a *ratio* of two detectors that
+    inflates the interval, and the grid measures by how much: at ``m = 2`` and
+    ``m = 3`` the fundamental component spans the whole nontrivial tangent
+    space, so ``full`` and ``fundamental`` are one detector and their ratio is
+    identically 1 -- yet independent resampling returned roughly +-9% on it.
+
+    This routine instead resamples the *joint* detection pattern retained by
+    :data:`~regimeshift.simulation.DETECTION_PATTERNS`: one multinomial draw per
+    configuration over the eight outcome triples, from which all three powers
+    are read off together. A dataset caught by every detector is redrawn as a
+    dataset caught by every detector. Degenerate pairs then return exactly 1 in
+    every replicate, as they must, and the intervals that carry real content
+    narrow to what the correlation actually supports.
+
+    Results without the pattern columns -- anything produced before they were
+    retained -- fall back to independent marginal draws, and the returned
+    ``*_paired`` flag records which was used.
+
+    **The effect subset is frozen.** A ratio can only be formed where *both*
+    detectors cross inside the grid, and 44 of 156 crossovers do not. The point
+    estimate takes its median over the surviving effects; a replicate that loses
+    a different effect would be estimating a different quantity, so replicates
+    that cannot fill the point estimate's subset are discarded rather than
+    silently re-medianed over whatever is left. ``*_boot_n`` reports how many of
+    ``n_boot`` survived; a low count is itself the signal that the median rests
+    on thin ground.
+
+    What this still does not cover is the critical-value uncertainty noted in
+    :func:`crossover_bootstrap`: thresholds are held at their estimated values,
+    so the intervals remain too narrow in that respect.
     """
     rng = np.random.default_rng(seed)
     lo_q, hi_q = (1.0 - ci) / 2.0, 1.0 - (1.0 - ci) / 2.0
     subset = results[results["scenario"] == scenario]
+    paired = _has_joint_patterns(subset)
     rows = []
 
     for m, group in subset.groupby("m"):
@@ -415,34 +569,42 @@ def crossover_ratio_bootstrap(
             (float(effect), detector): sub.sort_values("total_length")
             for (effect, detector), sub in group.groupby(["effect", "detector"])
         }
+        draws_for = _joint_power_sampler(group, effects, paired)
+
+        # Freeze the subset to the effects the point estimate actually uses, so
+        # every replicate estimates the same quantity.
+        point = _crossings_from_power(
+            curves, {key: sub[power_column].to_numpy(dtype=float) for key, sub in curves.items()},
+            target,
+        )
+        kept = {
+            pair: [e for e in effects
+                   if (float(e), pair[0]) in point and (float(e), pair[1]) in point]
+            for pair in pairs
+        }
+
         boot = {pair: [] for pair in pairs}
         for _ in range(n_boot):
-            crossings: dict[tuple[float, str], float] = {}
-            for key, sub in curves.items():
-                lengths = sub["total_length"].to_numpy(dtype=float)
-                power = np.clip(sub[power_column].to_numpy(dtype=float), 0.0, 1.0)
-                trials = sub["n_alt"].to_numpy(dtype=int)
-                value, status = _interpolate_crossover(
-                    lengths, rng.binomial(trials, power) / trials, target
+            crossings = _crossings_from_power(curves, draws_for(rng), target)
+            for pair in pairs:
+                num, den = pair
+                if not kept[pair]:
+                    continue
+                if any((float(e), d) not in crossings for e in kept[pair] for d in pair):
+                    continue  # cannot fill the frozen subset: discard the replicate
+                boot[pair].append(
+                    float(np.median([crossings[(float(e), num)] / crossings[(float(e), den)]
+                                     for e in kept[pair]]))
                 )
-                if status == "internal" and np.isfinite(value):
-                    crossings[key] = value
-            for num, den in pairs:
-                ratios = [
-                    crossings[(float(e), num)] / crossings[(float(e), den)]
-                    for e in effects
-                    if (float(e), num) in crossings and (float(e), den) in crossings
-                ]
-                if ratios:
-                    boot[(num, den)].append(float(np.median(ratios)))
 
-        row = {"m": int(m), "scenario": scenario, "n_boot": n_boot}
+        row = {"m": int(m), "scenario": scenario, "n_boot": n_boot, "paired": paired}
         for pair in pairs:
-            draws = boot[pair]
+            values = boot[pair]
             label = f"{pair[0]}/{pair[1]}"
-            row[f"{label}_ci_low"] = float(np.quantile(draws, lo_q)) if draws else float("nan")
-            row[f"{label}_ci_high"] = float(np.quantile(draws, hi_q)) if draws else float("nan")
-            row[f"{label}_boot_n"] = len(draws)
+            row[f"{label}_ci_low"] = float(np.quantile(values, lo_q)) if values else float("nan")
+            row[f"{label}_ci_high"] = float(np.quantile(values, hi_q)) if values else float("nan")
+            row[f"{label}_boot_n"] = len(values)
+            row[f"{label}_effects"] = len(kept[pair])
         rows.append(row)
     return pd.DataFrame(rows).sort_values("m").reset_index(drop=True)
 

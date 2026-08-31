@@ -15,12 +15,16 @@ counterparts live in ``test_statistical_validation.py``.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from regimeshift.analysis import (
     K_STAR,
+    _has_joint_patterns,
+    _pattern_mask,
     crossover_bootstrap,
     dimension_increment,
     crossover_ratio_bootstrap,
@@ -36,7 +40,14 @@ from regimeshift.detectors import (
     reset_fit_failures,
     split_penalty,
 )
-from regimeshift.simulation import Config, build_grid, config_seed, run_config
+from regimeshift.simulation import (
+    DETECTION_PATTERNS,
+    DETECTOR_NAMES,
+    Config,
+    build_grid,
+    config_seed,
+    run_config,
+)
 
 EFFECTS = (0.1, 0.2, 0.3)
 LENGTHS = (200, 400, 800, 1600, 3200)
@@ -528,3 +539,176 @@ def test_summary_converts_every_slope_column_together():
         assert bits[column] == pytest.approx(nats[column])
     # And the predicted slope in bits lands exactly on d * K*.
     assert bits["predicted_slope"] == pytest.approx(bits["k_star_multiple"] * K_STAR, abs=1e-12)
+
+# ---------------------------------------------------------------------------
+# Joint (paired) crossover-ratio bootstrap
+# ---------------------------------------------------------------------------
+
+LENGTH_GRID = (200, 400, 800, 1600, 3200)
+
+
+def _synthetic_results(power_by_detector, patterns=None, effects=(0.18, 0.25),
+                       lengths=LENGTH_GRID, n_alt=500, m=4):
+    """A results frame shaped like a real one, with power curves we control.
+
+    ``power_by_detector`` maps a detector to a power curve over ``lengths``.
+    ``patterns``, when given, maps each ``(effect, length)`` to the eight joint
+    counts; omit it to produce a pre-pattern file and exercise the fallback.
+    """
+    rows = []
+    for effect in effects:
+        for i, length in enumerate(lengths):
+            joint = None if patterns is None else patterns[(effect, length)]
+            for detector, curve in power_by_detector.items():
+                row = {
+                    "m": m, "scenario": "exact_orbit", "effect": effect,
+                    "total_length": length, "detector": detector,
+                    "power_calibrated": curve[i], "n_alt": n_alt,
+                }
+                if joint is not None:
+                    row.update(dict(zip(DETECTION_PATTERNS, joint)))
+                rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def _agreeing_patterns(power, n_alt=500):
+    """Joint counts for detectors that agree on every dataset: all the mass on
+    ``pattern_000`` and ``pattern_111``, so every marginal is ``power``."""
+    caught = int(round(power * n_alt))
+    counts = [0] * len(DETECTION_PATTERNS)
+    counts[DETECTION_PATTERNS.index("pattern_000")] = n_alt - caught
+    counts[DETECTION_PATTERNS.index("pattern_111")] = caught
+    return counts
+
+
+def test_detection_patterns_reproduce_every_marginal_power():
+    """The eight joint counts refine the three marginals, so summing the four
+    patterns that set a detector's bit must return its ``power_calibrated``
+    exactly. That identity is what makes them safe to resample from.
+    """
+    frame = pd.DataFrame(run_config(Config(4, "exact_orbit", 0.25, 200, n_alt=200, n_null=200)))
+
+    counts = frame[list(DETECTION_PATTERNS)].to_numpy(dtype=float)
+    np.testing.assert_allclose(counts.sum(axis=1), frame["n_alt"].to_numpy(dtype=float))
+    for index, detector in enumerate(DETECTOR_NAMES):
+        mask = (frame["detector"] == detector).to_numpy()
+        marginal = counts[mask][:, _pattern_mask(index)].sum(axis=1) / frame.loc[mask, "n_alt"]
+        np.testing.assert_allclose(
+            marginal.to_numpy(), frame.loc[mask, "power_calibrated"].to_numpy()
+        )
+    assert _has_joint_patterns(frame)
+
+
+def test_inconsistent_patterns_are_rejected_rather_than_trusted():
+    """The identity above is checked, not assumed, so a file whose patterns and
+    marginals disagree falls back instead of resampling from bad joint counts."""
+    frame = pd.DataFrame(run_config(Config(4, "exact_orbit", 0.25, 200, n_alt=200, n_null=200)))
+    assert _has_joint_patterns(frame)
+    frame.loc[0, "pattern_111"] = frame.loc[0, "pattern_111"] + 1
+    assert not _has_joint_patterns(frame)
+
+
+def test_a_degenerate_pair_gets_a_degenerate_interval_under_pairing():
+    """The check the independent bootstrap failed.
+
+    Detectors agreeing on every dataset have a crossover ratio of exactly 1
+    with no variance, and a paired resample returns that. An independent one
+    invents an interval around it -- the artefact reported at ``m = 2`` and
+    ``m = 3`` in the committed run, where ``full`` and ``fundamental`` are one
+    detector.
+    """
+    curve = [0.10, 0.28, 0.55, 0.78, 0.93]
+    powers = {name: curve for name in DETECTOR_NAMES}
+    patterns = {
+        (effect, length): _agreeing_patterns(curve[i])
+        for effect in (0.18, 0.25)
+        for i, length in enumerate(LENGTH_GRID)
+    }
+
+    paired = crossover_ratio_bootstrap(_synthetic_results(powers, patterns), n_boot=200).iloc[0]
+    assert bool(paired["paired"])
+    assert paired["fundamental/full_boot_n"] > 150
+    assert paired["fundamental/full_ci_low"] == pytest.approx(1.0)
+    assert paired["fundamental/full_ci_high"] == pytest.approx(1.0)
+
+    independent = crossover_ratio_bootstrap(_synthetic_results(powers), n_boot=200).iloc[0]
+    assert not bool(independent["paired"])
+    width = independent["fundamental/full_ci_high"] - independent["fundamental/full_ci_low"]
+    assert width > 0.05, "the independent bootstrap invents a width on a constant"
+
+
+def test_pairing_narrows_a_ratio_of_correlated_detectors():
+    """Not a tautology: positive correlation makes a paired resample of a ratio
+    tighter than an independent one, which is why the independent intervals
+    were the wrong ones to report."""
+    slow = [0.05, 0.18, 0.42, 0.70, 0.90]
+    fast = [0.12, 0.34, 0.62, 0.85, 0.97]
+    powers = {"full": slow, "fundamental": slow, "shared_orbit": fast}
+
+    # shared_orbit catches everything the others do, plus a little more, so the
+    # curves move together dataset by dataset.
+    patterns = {}
+    for effect in (0.18, 0.25):
+        for i, length in enumerate(LENGTH_GRID):
+            n_alt = 500
+            both = int(round(slow[i] * n_alt))
+            extra = int(round((fast[i] - slow[i]) * n_alt))
+            counts = [0] * len(DETECTION_PATTERNS)
+            counts[DETECTION_PATTERNS.index("pattern_111")] = both
+            counts[DETECTION_PATTERNS.index("pattern_001")] = extra
+            counts[DETECTION_PATTERNS.index("pattern_000")] = n_alt - both - extra
+            patterns[(effect, length)] = counts
+
+    label = "shared_orbit/full"
+    paired = crossover_ratio_bootstrap(
+        _synthetic_results(powers, patterns), n_boot=300, seed=7
+    ).iloc[0]
+    independent = crossover_ratio_bootstrap(
+        _synthetic_results(powers), n_boot=300, seed=7
+    ).iloc[0]
+
+    assert paired[f"{label}_boot_n"] > 200 and independent[f"{label}_boot_n"] > 200
+    paired_width = paired[f"{label}_ci_high"] - paired[f"{label}_ci_low"]
+    independent_width = independent[f"{label}_ci_high"] - independent[f"{label}_ci_low"]
+    assert paired_width < independent_width
+
+
+def test_the_bootstrap_freezes_the_effect_subset():
+    """Every replicate must estimate the same quantity: the median over the
+    effects the point estimate uses. A replicate that cannot fill that subset
+    is discarded rather than re-medianed over whatever survived, so
+    ``*_boot_n`` falls below ``n_boot`` -- and that shortfall is itself the
+    signal that the median rests on thin ground.
+
+    Here one of the two effects never crosses 0.5 inside the grid, so the point
+    estimate uses a single effect and no replicate may quietly substitute the
+    other.
+    """
+    strong = [0.10, 0.28, 0.55, 0.78, 0.93]
+    never = [0.01, 0.02, 0.03, 0.04, 0.05]
+    rows = []
+    for effect, power in ((0.18, never), (0.25, strong)):
+        for i, length in enumerate(LENGTH_GRID):
+            for detector in DETECTOR_NAMES:
+                rows.append({
+                    "m": 4, "scenario": "exact_orbit", "effect": effect,
+                    "total_length": length, "detector": detector,
+                    "power_calibrated": power[i], "n_alt": 500,
+                })
+    row = crossover_ratio_bootstrap(pd.DataFrame(rows), n_boot=200).iloc[0]
+
+    for pair in ("shared_orbit/full", "shared_orbit/fundamental", "fundamental/full"):
+        assert row[f"{pair}_effects"] == 1, "only the strong effect crosses inside the grid"
+        assert 0 < row[f"{pair}_boot_n"] <= 200
+
+
+def test_a_results_file_without_pattern_columns_falls_back_and_says_so():
+    """Backwards compatibility: the committed run predates the joint columns,
+    so it must still analyse, by the old independent route, and report that."""
+    path = Path(__file__).resolve().parent.parent / "results" / "v3-production" / "full_results.csv"
+    if not path.exists():
+        pytest.skip("committed production results are not present")
+
+    row = crossover_ratio_bootstrap(pd.read_csv(path), n_boot=50).iloc[0]
+    assert not bool(row["paired"])
+    assert np.isfinite(row["shared_orbit/full_ci_low"])

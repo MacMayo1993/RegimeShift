@@ -383,3 +383,144 @@ def test_the_fit_converges_across_the_sweep():
                 assert np.isfinite(result.score)
                 assert result.selected_shift in range(1, m)
     assert fit_failure_count() == 0
+
+
+# --------------------------------------------------------------------------
+# the Taylor order of the isotropic approximation
+# --------------------------------------------------------------------------
+
+
+def _chart_fisher(eta, m):
+    """Fisher information of the fundamental family in the ``eta`` chart."""
+    from regimeshift.fourier import probabilities
+
+    B = fourier_design_matrix(m)
+    p = probabilities(np.atleast_1d(np.asarray(eta, dtype=float)), m)
+    return B.T @ (np.diag(p) - np.outer(p, p)) @ B
+
+
+def _exact_deviation_penalty(eta, m, n_left, n_right, tau, shift=1):
+    """``0.5 logdet(I + tau^2 J_eff)`` with the true chart information.
+
+    ``J_eff`` is the Schur complement of the joint ``(eta, delta)`` information
+    for the *general* metric, of which :func:`deviation_penalty` is the
+    identity-information reduction.
+    """
+    d = fundamental_dimension(m)
+    R = rotation_matrix(m, shift)
+    I1 = _chart_fisher(eta, m)
+    I2 = _chart_fisher(R @ np.atleast_1d(eta), m)
+    top = n_left * I1 + n_right * (R.T @ I2 @ R)
+    cross = n_right * (R.T @ I2)
+    schur = n_right * I2 - cross.T @ np.linalg.solve(top, cross)
+    return 0.5 * float(np.log(np.linalg.det(np.eye(d) + tau**2 * schur)))
+
+
+def _directions(m, radius):
+    d = fundamental_dimension(m)
+    angles = np.linspace(0.0, 2.0 * np.pi, 25)[:-1]
+    if d == 1:
+        return [np.array([radius]), np.array([-radius])]
+    return [radius * np.array([np.cos(a), np.sin(a)]) for a in angles]
+
+
+@pytest.mark.parametrize("m", GROUPS)
+def test_chart_information_is_first_order_only_at_m_three(m):
+    """Equivariance of the chart metric pins where a linear term can live.
+
+    ``I(R eta) = R^T I(eta) R`` forces ``A(R eta) = R^T A(eta) R`` on the linear
+    term. Its trace part is a rotation-invariant linear functional on R^2, hence
+    zero for every ``m >= 2``; its traceless part carries weight 2 against
+    ``eta``'s weight 1, so it survives only when ``3 * (2 pi / m)`` is a whole
+    number of turns -- only at ``m = 3``.
+    """
+    d = fundamental_dimension(m)
+    eta = np.zeros(d)
+    eta[0] = 1.0
+    deviations = [
+        np.abs(_chart_fisher(eps * eta, m) - np.eye(d)).max() for eps in (1e-2, 1e-3)
+    ]
+    exponent = np.log10(deviations[0] / deviations[1])
+    expected = 1.0 if m == 3 else 2.0
+    assert exponent == pytest.approx(expected, abs=0.05)
+
+
+def test_the_linear_metric_term_at_m_three_is_traceless():
+    """Which is why it does not reach the penalty: the trace part of the linear
+    term must vanish at every ``m``, so only the traceless part survives here.
+
+    Asserted as a scaling statement rather than a threshold. Across a decade in
+    ``|eta|`` the perturbation's entries fall by 10 -- it is genuinely first
+    order -- while its trace falls by 100, which is what "the trace part starts
+    at second order" means.
+    """
+    entries, traces = [], []
+    for eps in (1e-2, 1e-3):
+        perturbation = _chart_fisher(np.array([eps, 0.0]), 3) - np.eye(2)
+        entries.append(np.abs(perturbation).max())
+        traces.append(abs(np.trace(perturbation)))
+
+    assert np.log10(entries[0] / entries[1]) == pytest.approx(1.0, abs=0.05)
+    assert np.log10(traces[0] / traces[1]) == pytest.approx(2.0, abs=0.05)
+
+
+@pytest.mark.parametrize("m", GROUPS)
+def test_isotropic_penalty_discrepancy_is_second_order_at_every_group_order(m):
+    """``0.5 logdet`` is blind to a traceless first-order perturbation, so the
+    *penalty* gap is ``O(|eta|^2)`` even at ``m = 3``, where the metric gap is
+    only first order.
+
+    This is the claim Section 3.4 and Section 13 make. It needs the traceless
+    step above; without it the ``m = 3`` case would look like a counterexample.
+    """
+    d = fundamental_dimension(m)
+    n_left = n_right = 1200
+    tau = 0.15
+    isotropic = deviation_penalty(d, n_left, n_right, tau)
+
+    gaps = []
+    for radius in (0.2, 0.1):
+        gaps.append(
+            max(
+                abs(isotropic - _exact_deviation_penalty(eta, m, n_left, n_right, tau))
+                for eta in _directions(m, radius)
+            )
+        )
+    exponent = np.log2(gaps[0] / gaps[1])
+    assert exponent == pytest.approx(2.0, abs=0.1)
+
+
+@pytest.mark.parametrize("m", GROUPS)
+def test_the_isotropic_penalty_is_exact_at_the_reference_point(m):
+    d = fundamental_dimension(m)
+    exact = _exact_deviation_penalty(np.zeros(d), m, 1200, 1200, 0.15)
+    assert deviation_penalty(d, 1200, 1200, 0.15) == pytest.approx(exact, abs=1e-9)
+
+
+def test_the_local_jsd_check_is_loose_only_at_m_three():
+    """Section 5.4 quotes a single relative tolerance of 3e-3 for the local
+    Jensen-Shannon limit. That is the ``m = 3`` number and nothing else: the
+    same first-order metric term makes the cubic correction an order of
+    magnitude larger there than at any other group order.
+    """
+    from regimeshift.fourier import probabilities
+    from regimeshift.gains import weighted_jensen_shannon
+
+    eps = 1e-2
+    errors = {}
+    for m in GROUPS:
+        d = fundamental_dimension(m)
+        eta = np.zeros(d)
+        eta[0] = eps
+        predicted = (1.0 - np.cos(2.0 * np.pi / m)) / 4.0
+        observed = (
+            weighted_jensen_shannon(
+                probabilities(eta, m), probabilities(rotation_matrix(m, 1) @ eta, m)
+            )
+            / eps**2
+        )
+        errors[m] = abs(observed - predicted) / predicted
+
+    assert errors[3] > 1e-3
+    for m in (2, 4, 5, 6):
+        assert errors[m] < 1e-4

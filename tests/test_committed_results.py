@@ -101,3 +101,111 @@ def test_shipped_regression_summary_tracks_the_predictions():
             assert abs(row["penalty_slope"] - row["predicted_slope"]) < 0.35, row.to_dict()
         else:
             assert abs(row["penalty_slope"]) < 0.4, row.to_dict()
+
+
+# ---------------------------------------------------------------------------
+# Claims the manuscript states about this run, pinned against the run itself
+# ---------------------------------------------------------------------------
+
+
+def test_models_a_and_b_are_the_same_detector_at_m_two_and_three():
+    """At ``m = 2, 3`` the fundamental component is the whole nontrivial
+    tangent space, so ``full`` and ``fundamental`` are one hypothesis.
+
+    In the shipped run their calibrated power is not merely close but *equal*
+    at every design point. That is what makes the ``fundamental/full`` crossover
+    ratio identically 1 with no variance, and hence what makes the bootstrap
+    interval reported for it in Section 9.4 an artefact of resampling the two
+    detectors independently rather than a check that passed.
+    """
+    results = pd.read_csv(RESULTS / "full_results.csv")
+    keys = ["m", "scenario", "effect", "total_length"]
+
+    for m in (2, 3):
+        wide = results[results["m"] == m].pivot_table(
+            index=keys, columns="detector", values="power_calibrated"
+        )
+        assert (wide["full"] == wide["fundamental"]).all()
+
+        scores = results[results["m"] == m].pivot_table(
+            index=keys, columns="detector", values="mean_score"
+        )
+        assert (scores["full"] - scores["fundamental"]).abs().max() < 1e-9
+
+    # and at m = 4 they genuinely differ, so the check above has content
+    wide = results[results["m"] == 4].pivot_table(
+        index=keys, columns="detector", values="power_calibrated"
+    )
+    assert (wide["full"] != wide["fundamental"]).any()
+
+
+def test_the_independent_ratio_bootstrap_widens_a_constant():
+    """Quantifies the artefact the previous test explains.
+
+    ``fundamental/full`` is exactly 1 at ``m = 2, 3``; the committed interval is
+    roughly +-9%. Pinned so the manuscript's caveat cannot drift from its size.
+    """
+    summary = pd.read_csv(RESULTS / "crossover_ratio_summary.csv")
+    boot = pd.read_csv(RESULTS / "crossover_ratio_bootstrap.csv")
+    exact = summary[summary["scenario"] == "exact_orbit"].set_index("m")
+    exact_boot = boot[boot["scenario"] == "exact_orbit"].set_index("m")
+
+    for m in (2, 3):
+        assert exact.loc[m, "fundamental/full"] == 1.0
+        low = exact_boot.loc[m, "fundamental/full_ci_low"]
+        high = exact_boot.loc[m, "fundamental/full_ci_high"]
+        assert low < 0.94 and high > 1.06
+
+
+def test_the_worst_raw_null_rate_is_not_at_m_two():
+    """Section 9.6 reported the worst zero-threshold null rates as sitting at
+    ``m = 2``. They do not: the worst row is ``m = 3``, and ``m = 2`` has the
+    *lowest* mean of any group order. The driver is weak effect on short
+    segments -- proximity to orbit collapse -- at every ``m``, and it eases as
+    ``m`` grows.
+    """
+    results = pd.read_csv(RESULTS / "full_results.csv")
+    orbit = results[results["detector"] == "shared_orbit"]
+
+    worst = orbit.loc[orbit["null_rate_zero_threshold"].idxmax()]
+    assert worst["m"] == 3
+    assert worst["effect"] == pytest.approx(0.08)
+    assert worst["total_length"] == 200
+
+    by_m = orbit.groupby("m")["null_rate_zero_threshold"].mean()
+    assert by_m.idxmin() == 2
+    assert by_m.loc[3] > by_m.loc[6]
+
+
+def test_crossover_ratio_medians_rest_on_few_effects_at_small_m():
+    """Section 9.4's medians are taken over the effects where *both* detectors
+    cross inside the grid. At ``m = 2, 3`` that is two of four, so the "median
+    across effects" is the midpoint of a pair -- and because each column keeps
+    its own surviving subset, the columns do not compose.
+    """
+    summary = pd.read_csv(RESULTS / "crossover_ratio_summary.csv")
+    exact = summary[summary["scenario"] == "exact_orbit"].set_index("m")
+
+    assert exact.loc[2, "shared_orbit/full_n"] == 2
+    assert exact.loc[3, "shared_orbit/full_n"] == 2
+    assert exact.loc[6, "shared_orbit/full_n"] == 4
+
+    composed = (
+        exact.loc[5, "shared_orbit/fundamental"] * exact.loc[5, "fundamental/full"]
+    )
+    assert abs(composed - exact.loc[5, "shared_orbit/full"]) > 1e-3
+
+
+def test_shared_orbit_residual_slopes_are_significantly_nonzero():
+    """Section 9.3 calls these "small group-dependent drift". By the run's own
+    standard errors several are many standard errors from the structural
+    prediction of zero -- which is the point, since the identity
+    ``slope = dd/2 - s`` localises them in the likelihood gain. They are a
+    quantified target for the singular analysis, not noise.
+    """
+    summary = pd.read_csv(RESULTS / "score_regression_summary.csv")
+    orbit = summary[summary["detector"] == "shared_orbit"].set_index("m")
+
+    t_wls = (orbit["penalty_slope_wls"] / orbit["penalty_slope_wls_se"]).abs()
+    assert t_wls.loc[6] > 5.0
+    assert (t_wls > 2.0).sum() >= 3

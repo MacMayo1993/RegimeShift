@@ -213,16 +213,42 @@ machine precision — which happens *at* the optimum, with observed gradient nor
 around 5e-8. Convergence is therefore judged on the first-order condition,
 relative to `n` since the gradient is `B^T (counts - n p)`.
 
-The audit also surfaced a second, separate property. When a category has zero
-count — routine on short segments — the fundamental MLE does not exist: the
-likelihood rises toward the simplex boundary and is asymptotically flat along
-that direction. Different optimiser starts then halt at very different
-coordinates (observed `|theta|` of 8 versus 15) **while agreeing on the
-log-likelihood to six decimals**. Since every detector consumes only
-likelihoods, scores are unaffected and start-independent, and both facts are
-pinned by tests. It does mean a fitted *coordinate* from a short segment should
-not be interpreted, and it is the reason the fit retains two starts even though
-the log-likelihood is concave in theta.
+The audit also surfaced a second, separate property, which an earlier version of
+this note stated wrongly. It said a zero category count makes the fundamental MLE
+fail to exist, and that zero counts are routine on short segments. Neither is
+true.
+
+The fundamental family is a *linear* exponential family, so by the standard
+condition the MLE exists exactly when the sufficient statistic
+`t_bar = sum_j f_j B_j` is interior to `conv{B_j}`. That hull is the regular
+`m`-gon on the rows of `B`, whose proper faces are spanned by cyclically adjacent
+vertices, which makes the criterion decidable from the support in `O(m)`:
+
+* `m = 2`: exists iff both cells have positive count;
+* `m >= 3`: exists iff the support lies in neither a single category nor a pair
+  of cyclically **adjacent** categories.
+
+`fundamental_mle_exists` implements this and `test_detectors.py` checks it
+against a direct convex-hull computation over every support pattern for
+`m = 2..7` and 2,000 random count vectors. So a zero cell is neither necessary
+nor sufficient once `m >= 3`: `[0, 10, 10, 10]` has an ordinary interior optimum,
+and so does `[10, 0, 10, 0]` with two empty cells, because opposite vertices span
+no face. The genuine failure is `[10, 10, 0, 0]` — an adjacent pair carrying all
+the mass — where the likelihood is *flat* along the escape direction and
+different optimiser starts halt at very different coordinates (observed
+`|theta|` of 8 versus 15) **while agreeing on the log-likelihood to six
+decimals**.
+
+Zero counts are also not routine on this grid: the shortest segment is 100
+observations, the smallest cell probability anywhere is 0.091, and the worst
+configuration's probability of an empty cell is 7.2e-5 — for an expected 0.2
+zero-cell segments across all 936,000 the run scores, summing over the design
+with each configuration's own lengths and draw counts. A genuine failure of the
+criterion is further off still: at that corner it needs the whole segment inside
+two adjacent cells, bounded by 1e-37. Scores are unaffected and start-independent
+either way, since the supremum is finite even when unattained; what should not be
+interpreted is a fitted *coordinate* when the criterion above fails. The fit
+retains two starts as cheap insurance, not because the grid produces this case.
 
 **Split fraction.** `Config.split_fraction` makes rho a design dimension
 (`segment_length` is the left segment; the default 0.5 reproduces the balanced
@@ -230,6 +256,17 @@ design and leaves every existing seed and checkpoint unchanged). This tests a
 prediction the manuscript makes but never checked: rho shifts only the bounded
 term `(d/2) log(rho (1 - rho))`, leaving the `log n` coefficient at `d/2`. Both
 the closed-form and Monte Carlo versions are asserted.
+
+Two things to know when quoting the numbers §9.7 of the manuscript reports
+(1.404 at a balanced split, 1.519 at rho = 0.25). They come from the slow test,
+not from the committed run, which holds rho = 0.5 for all 936 rows — and the test
+uses exact-orbit data over five lengths at 300 trials per cell against Table 3's
+higher-mode data over six lengths at 500/1,000, with a +-0.3 acceptance band.
+That design gap, not a drift in rho, is why 1.404 sits further from 1.5 than
+Table 3's 1.488 for the same detector and group order. Adding rho to the
+production grid would close it. And the `rho(1-rho)` decomposition is an exact
+rearrangement (proved in `Penalty.lean`), so what the regressions actually test
+is that the gain residual `s` carries no rho-dependent `log n` structure.
 
 ## Model D: the approximate-orbit model (Section 14.1)
 
