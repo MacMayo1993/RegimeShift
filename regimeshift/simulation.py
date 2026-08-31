@@ -26,6 +26,7 @@ from .scenarios import Segments, build_segments
 
 __all__ = [
     "BASE_SEED",
+    "DETECTION_PATTERNS",
     "Config",
     "config_seed",
     "sample_counts",
@@ -37,6 +38,26 @@ __all__ = [
 BASE_SEED = 20260713
 
 DETECTOR_NAMES = ("full", "fundamental", "shared_orbit")
+
+#: Column names for the joint calibrated-detection pattern counts.
+#:
+#: Every alternative dataset is scored by *all three* detectors, so each one
+#: yields a triple of calibrated detection indicators. ``power_calibrated``
+#: keeps only the three marginals, which is enough to report power but not to
+#: resample the detectors together: a bootstrap built from the marginals alone
+#: treats detectors as independent when they are strongly positively correlated,
+#: and that inflates every interval on a *ratio* of two of them.
+#:
+#: These eight counts are the joint distribution's sufficient statistic. Bit
+#: ``i`` of the suffix is detection by ``DETECTOR_NAMES[i]``, so ``pattern_101``
+#: counts datasets the full and shared-orbit detectors caught and the
+#: fundamental detector missed. They sum to ``n_alt``, and summing the four
+#: patterns whose bit ``i`` is set recovers ``power_calibrated`` for that
+#: detector exactly -- which :mod:`regimeshift.analysis` asserts before using
+#: them.
+DETECTION_PATTERNS = tuple(
+    "pattern_" + format(code, "03b") for code in range(2 ** len(DETECTOR_NAMES))
+)
 
 
 @dataclass(frozen=True)
@@ -143,6 +164,15 @@ def run_config(config: Config, base_seed: int = BASE_SEED, segments: Segments | 
     gains = population_gains(segments.p_left, segments.p_right, m, w_left=nL / (nL + nR))
     failures = fit_failure_count()
 
+    # Joint calibrated-detection patterns, retained so that a ratio bootstrap can
+    # resample the detectors together rather than independently. See
+    # DETECTION_PATTERNS for the encoding.
+    detected = np.stack(
+        [alt_scores[name] > critical[name] for name in DETECTOR_NAMES], axis=1
+    )
+    codes = detected @ (1 << np.arange(len(DETECTOR_NAMES) - 1, -1, -1))
+    pattern_counts = np.bincount(codes, minlength=len(DETECTION_PATTERNS))
+
     rows = []
     for name in DETECTOR_NAMES:
         rows.append(
@@ -175,6 +205,10 @@ def run_config(config: Config, base_seed: int = BASE_SEED, segments: Segments | 
                 "alpha": config.alpha,
                 "optimizer_failures": failures,
                 "seed": config_seed(config, base_seed),
+                **{
+                    column: int(count)
+                    for column, count in zip(DETECTION_PATTERNS, pattern_counts)
+                },
             }
         )
     return rows
