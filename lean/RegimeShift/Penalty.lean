@@ -45,7 +45,9 @@ def dFund (g : ℕ) : ℕ := if g ≤ 2 then 1 else 2
 
 inductive Model | A | B | C | D
 
-/-- `Δd` for each model class. -/
+/-- `Δd` for each model class. Read only at `g ≥ 2`: the truncated subtraction
+below returns `0` at `g ∈ {0, 1}`, where the cyclic model is not defined and
+`dFund` is likewise a placeholder. -/
 def Model.increment : Model → ℕ → ℕ
   | .A, g => g - 1
   | .B, g => dFund g
@@ -54,10 +56,16 @@ def Model.increment : Model → ℕ → ℕ
 
 /-- **The counting statement of Section 4.4.** On regular strata and under the
 BIC/Laplace convention, every leading coefficient in bits per e-fold is an
-integer multiple of `K*`. The proof is immediate once the increments are natural
-numbers — which is the whole content of the claim, and precisely what fails on
-singular strata, where the leading coefficient is a real log canonical threshold
-that need not be a half-integer. -/
+integer multiple of `K*`.
+
+Be clear about how little this verifies. It reduces to `∀ n : ℕ, n / (2 log 2) =
+n * K*`, which is arithmetic, and would hold for *any* `ℕ`-valued `increment`
+whatsoever — the mathematical content is entirely in `Model.increment` being
+`ℕ`-valued, and that is a definition transcribed from §3, not a theorem. What the
+statement rules out is only a non-integer count; it says nothing about whether
+the increments are the right ones. On singular strata the premise fails outright,
+since the leading coefficient is a real log canonical threshold that need not be
+a half-integer. -/
 theorem leading_coeff_multiple_of_Kstar (M : Model) (g : ℕ) :
     ∃ n : ℕ, (M.increment g : ℝ) / (2 * Real.log 2) = n * Kstar :=
   ⟨M.increment g, by rw [Kstar]; ring⟩

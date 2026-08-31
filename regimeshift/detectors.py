@@ -46,6 +46,7 @@ __all__ = [
     "validate_pair",
     "multinomial_loglik",
     "fit_fundamental",
+    "fundamental_mle_exists",
     "fundamental_loglik",
     "full_detector",
     "fundamental_detector",
@@ -139,7 +140,7 @@ def nats_to_bits(nats: float) -> float:
 
 
 def split_penalty(dim: int, n_left: int, n_right: int) -> float:
-    """Exact known-split regular complexity increment (Section 4.2).
+    """BIC/Laplace known-split regular complexity increment (Section 4.2).
 
     ``(dim / 2) * log(n_left * n_right / n)``. The coefficient of ``log n`` is
     ``dim / 2``; the split fraction only affects the bounded term.
@@ -279,6 +280,54 @@ def fit_fundamental(counts: np.ndarray, m: int, n_restarts: int = 2) -> tuple[np
     return best_theta, float(best_ll)
 
 
+def fundamental_mle_exists(counts: np.ndarray, m: int) -> bool:
+    """Whether the fundamental-family MLE is attained for ``counts``.
+
+    The fundamental family is a *linear* exponential family: the logits are
+    confined to the column span of ``B``, so the sufficient statistic is
+    ``t_bar = sum_j f_j B_j`` with ``f`` the empirical frequencies. By the
+    standard Barndorff-Nielsen condition the MLE exists exactly when ``t_bar``
+    lies in the **interior** of ``conv{B_1, ..., B_m}``, and diverges along a
+    separating direction when it lies on the boundary.
+
+    For this family that condition has a closed form. The rows ``B_j`` are the
+    vertices of a regular ``m``-gon (a two-point set at ``m = 2``), and every
+    proper face of a regular polygon is spanned by cyclically *adjacent*
+    vertices. So the criterion is decidable in ``O(m)`` from the support alone:
+
+    * ``m == 2``  : the MLE exists iff both cells have positive count;
+    * ``m >= 3``  : the MLE exists iff the support is contained in neither a
+      single category nor a pair of cyclically adjacent categories.
+
+    A zero cell is therefore neither necessary nor sufficient for ``m >= 3``.
+    ``[0, 10, 10, 10]`` at ``m = 4`` has an ordinary finite optimum; so does
+    ``[10, 0, 10, 0]``, with *two* empty cells, because opposite vertices span
+    no face. What does fail is ``[10, 10, 0, 0]``: two adjacent cells carrying
+    all the mass put ``t_bar`` on an edge, and the likelihood is asymptotically
+    flat along the escape direction.
+
+    Callers should note that detector *scores* consume only likelihoods and are
+    unaffected either way, since the supremum is finite even when unattained.
+    What is not interpretable when this returns ``False`` is a fitted
+    *coordinate*: different optimiser starts halt at very different ``theta``
+    while agreeing on the log-likelihood to machine precision.
+    """
+    counts = np.asarray(counts, dtype=float)
+    if counts.shape != (m,):
+        raise ValueError(f"counts must have shape ({m},), got {counts.shape}")
+    if np.any(counts < 0):
+        raise ValueError("counts must be nonnegative")
+    support = [j for j in range(m) if counts[j] > 0]
+    if len(support) <= 1:
+        return False
+    if m == 2:
+        return True
+    if len(support) > 2:
+        return True
+    gap = (support[1] - support[0]) % m
+    return gap not in (1, m - 1)
+
+
 def fundamental_loglik(theta: np.ndarray, counts: np.ndarray, m: int) -> float:
     """Log-likelihood of ``counts`` under the fundamental family at ``theta``."""
     B = fourier_design_matrix(m)
@@ -399,6 +448,31 @@ def deviation_penalty(
     ``0.5 * logdet(I + tau^2 J_eff)``; it is exact under the local
     identity-information approximation at the Fisher-orthonormal reference
     point, and approximate away from it.
+
+    **The discrepancy is second order in ``|eta|``, for every group order.**
+    Fisher orthonormality holds *at* ``eta = 0`` and does not make the metric
+    globally the identity, so this needs an argument rather than an assertion.
+    Write ``I(eta) = I + A(eta) + O(|eta|^2)`` with ``A`` linear. Because
+    ``T B = B R``, the chart's information is equivariant,
+    ``I(R eta) = R^T I(eta) R``, which forces ``A(R eta) = R^T A(eta) R``.
+    Split ``A`` into its trace and traceless parts:
+
+    * the trace part is a rotation-invariant *linear* functional on R^2, hence
+      identically zero for every ``m >= 2``;
+    * the traceless part transforms with weight 2 while ``eta`` carries weight
+      1, so it survives only when ``3 * (2 pi / m) = 0 mod 2 pi`` -- that is,
+      only at ``m = 3``.
+
+    So the metric error really is first order at ``m = 3`` and second order
+    elsewhere. The *penalty* error is second order regardless, because
+    ``0.5 * logdet`` is blind to a traceless first-order perturbation: the
+    Schur complement's first-order change satisfies
+    ``tr dS = k1 * tr E2 + k2 * tr E1`` (using ``tr(R E R^T) = tr E``), and
+    ``tr A == 0`` by the first bullet. ``test_approximate_orbit.py`` measures
+    both exponents.
+
+    The same fact explains why the local Jensen-Shannon check of Section 5.4 is
+    an order of magnitude looser at ``m = 3`` than at any other group order.
 
     The two limits are exactly the models being interpolated:
 

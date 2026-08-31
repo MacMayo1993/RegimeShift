@@ -22,6 +22,7 @@ from regimeshift.detectors import (
     full_detector,
     fundamental_detector,
     fundamental_loglik,
+    fundamental_mle_exists,
     label_cost,
     multinomial_loglik,
     run_all_detectors,
@@ -390,3 +391,162 @@ def test_split_penalty_is_negative_at_tiny_sizes():
     observation per segment the increment is ``-(dim/2) log 2``.
     """
     assert split_penalty(2, 1, 1) == pytest.approx(-np.log(2.0))
+
+
+# ---------------------------------------------------------------------------
+# Existence of the fundamental MLE (Section 7.5)
+# ---------------------------------------------------------------------------
+
+
+def _t_bar_is_interior(counts: np.ndarray, m: int, tol: float = 1e-12) -> bool:
+    """Barndorff-Nielsen condition, computed from the convex hull directly.
+
+    The reference implementation of the criterion :func:`fundamental_mle_exists`
+    shortcuts. It builds ``t_bar = sum_j f_j B_j`` and asks whether it is
+    strictly inside ``conv{B_j}``, with no appeal to the polygon's face
+    structure -- so agreeing with it is a real check on the shortcut.
+    """
+    from regimeshift.fourier import fourier_design_matrix
+
+    B = fourier_design_matrix(m)
+    f = np.asarray(counts, dtype=float)
+    f = f / f.sum()
+    t = B.T @ f
+    if m == 2:
+        return abs(t[0]) < np.abs(B[:, 0]).max() - tol
+    for j in range(m):
+        a, b = B[j], B[(j + 1) % m]
+        edge = b - a
+        normal = np.array([-edge[1], edge[0]])
+        if normal @ (-a) > 0:  # orient outward, away from the centre
+            normal = -normal
+        if normal @ (t - a) >= -tol * np.linalg.norm(normal):
+            return False
+    return True
+
+
+@pytest.mark.parametrize("m", [2, 3, 4, 5, 6, 7])
+def test_mle_existence_rule_matches_the_convex_support_condition(m):
+    """The O(m) adjacency rule agrees with the convex-hull condition exactly.
+
+    Checked over every support pattern at three weightings, which is the whole
+    space the rule can be wrong on: the criterion depends on the support and,
+    through ``t_bar``, on the weights.
+    """
+    import itertools
+
+    for k in range(1, m + 1):
+        for support in itertools.combinations(range(m), k):
+            for weights in ([1] * k, list(range(1, k + 1)), [1] + [7] * (k - 1)):
+                counts = np.zeros(m)
+                counts[list(support)] = np.array(weights, dtype=float) * 10.0
+                assert fundamental_mle_exists(counts, m) == _t_bar_is_interior(counts, m), (
+                    f"m={m} counts={counts}"
+                )
+
+
+@pytest.mark.parametrize("m", [3, 4, 5, 6, 7])
+def test_mle_existence_rule_matches_on_random_counts(m):
+    rng = np.random.default_rng(20260713 + m)
+    for _ in range(400):
+        counts = rng.integers(0, 6, size=m).astype(float)
+        if counts.sum() == 0:
+            continue
+        assert fundamental_mle_exists(counts, m) == _t_bar_is_interior(counts, m)
+
+
+def test_a_zero_cell_does_not_by_itself_break_the_mle():
+    """The manuscript's Section 7.5 used to say a zero count implies the MLE
+    does not exist. It does not, for ``m >= 3``.
+
+    ``[0, 10, 10, 10]`` has an empty cell and an ordinary interior optimum:
+    driving the first cell's probability to zero would drive its *opposite*
+    cell up, and that cell has positive count, so the likelihood turns over.
+    """
+    counts = np.array([0.0, 10.0, 10.0, 10.0])
+    assert fundamental_mle_exists(counts, 4)
+
+    theta_hat, ll_hat = fit_fundamental(counts, 4)
+    assert np.linalg.norm(theta_hat) < 1.0
+    assert np.isfinite(ll_hat)
+    for direction in np.eye(2):
+        assert fundamental_loglik(theta_hat + direction, counts, 4) < ll_hat
+        assert fundamental_loglik(theta_hat - direction, counts, 4) < ll_hat
+
+
+def test_two_empty_opposite_cells_still_leave_a_finite_optimum():
+    """Two zero cells, and the MLE is not merely finite but exactly uniform:
+    opposite vertices of the square span no face of it."""
+    counts = np.array([10.0, 0.0, 10.0, 0.0])
+    assert fundamental_mle_exists(counts, 4)
+    theta_hat, ll_hat = fit_fundamental(counts, 4)
+    np.testing.assert_allclose(theta_hat, np.zeros(2), atol=1e-8)
+    assert np.isfinite(ll_hat)
+
+
+def test_two_adjacent_cells_are_the_case_that_genuinely_fails():
+    """All mass on a cyclically adjacent pair puts ``t_bar`` on an edge.
+
+    The supremum is finite but unattained, so the likelihood is *flat* along
+    the escape direction -- which is why an optimiser stops at a large, and
+    start-dependent, coordinate while reporting a sensible log-likelihood.
+    """
+    counts = np.array([10.0, 10.0, 0.0, 0.0])
+    assert not fundamental_mle_exists(counts, 4)
+
+    theta_hat, ll_hat = fit_fundamental(counts, 4)
+    assert np.linalg.norm(theta_hat) > 5.0
+    # flat, not decreasing: going four times further costs nothing
+    assert fundamental_loglik(4.0 * theta_hat, counts, 4) == pytest.approx(ll_hat, abs=1e-9)
+
+
+def test_at_m_two_a_zero_cell_is_exactly_the_failure_condition():
+    """At ``m = 2`` the hull is a segment and both endpoints are faces, so the
+    blanket claim happens to be right -- which is presumably where it came
+    from. It does not generalise."""
+    assert not fundamental_mle_exists(np.array([0.0, 10.0]), 2)
+    assert not fundamental_mle_exists(np.array([10.0, 0.0]), 2)
+    assert fundamental_mle_exists(np.array([1.0, 10.0]), 2)
+
+
+def test_zero_cells_are_not_routine_on_the_production_grid():
+    """Section 7.5 called zero counts "routine on short segments". They are not.
+
+    Computed over the actual design rather than a worst-case corner: every
+    configuration's segment probabilities and its own segment lengths, weighted
+    by how many datasets it draws. A union bound on P(some cell empty) is an
+    overestimate and still lands at a fraction of one segment across the whole
+    run.
+
+    The stronger statement is about the criterion rather than the counts. Even
+    at the worst corner a *genuine* failure needs the whole segment to land in
+    at most two cyclically adjacent cells, and no adjacent pair there carries
+    enough mass for that to be reachable at any length on the grid.
+    """
+    from regimeshift.runner import PRODUCTION_GRID
+    from regimeshift.scenarios import build_segments
+    from regimeshift.simulation import build_grid
+
+    expected = 0.0
+    segments_scored = 0
+    worst = 0.0
+    smallest_cell = 1.0
+    for config in build_grid(**PRODUCTION_GRID):
+        segments = build_segments(config.m, config.scenario, config.effect)
+        drawn = config.n_alt + config.n_null
+        for p, n in ((segments.p_left, config.n_left), (segments.p_right, config.n_right)):
+            smallest_cell = min(smallest_cell, float(p.min()))
+            p_empty = float(np.sum((1.0 - p) ** n))
+            worst = max(worst, p_empty)
+            expected += p_empty * drawn
+            segments_scored += drawn
+
+    assert segments_scored == 936_000
+    assert smallest_cell == pytest.approx(0.091, abs=0.001)  # quoted in Section 7.5
+    assert worst == pytest.approx(7.2e-5, rel=0.05)          # worst corner, n = 100
+    assert expected < 1.0                                    # about 0.2 segments in 936,000
+
+    # and the worst corner cannot break the criterion at any length on the grid
+    p = build_segments(6, "higher_mode", 0.25).p_right
+    heaviest_adjacent_pair = max(p[j] + p[(j + 1) % 6] for j in range(6))
+    assert heaviest_adjacent_pair**100 < 1e-30

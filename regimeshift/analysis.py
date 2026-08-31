@@ -347,6 +347,28 @@ def crossover_bootstrap(
     relevant tail. And detectors are resampled independently although they score
     the *same* simulated datasets and are positively correlated, which makes the
     ratio intervals conservative (too wide) rather than optimistic.
+
+    **How wide, measurably.** The second limitation is not a mild conservatism,
+    and the grid contains its own calibration. At ``m = 2`` and ``m = 3`` the
+    fundamental component spans the whole nontrivial tangent space, so ``full``
+    and ``fundamental`` are the same detector scoring the same datasets: in the
+    committed run their calibrated power agrees *exactly* at every design point.
+    The ``fundamental/full`` ratio is therefore identically 1 with zero
+    variance -- and :func:`crossover_ratio_bootstrap`, which resamples the same
+    way, reports [0.916, 1.098] at ``m = 2`` and [0.926, 1.094] at ``m = 3``,
+    because it draws two independent binomials from one shared power curve.
+    A second symptom in the same row: at ``m = 2``
+    ``shared_orbit/full`` gets [0.695, 0.814] while ``shared_orbit/fundamental``
+    gets [0.701, 0.821], two intervals for what is mathematically one number.
+
+    Read that +-9% as the measured inflation on the rows that carry real
+    content, and do not read the ``m = 2, 3`` rows as a passed check. Removing
+    it needs a *joint* resample of per-dataset detector outcomes, which
+    :mod:`regimeshift.simulation` does not currently retain; that is the natural
+    next revision of this analysis, and it is a change to the runner rather than
+    to this function. ``tests/test_committed_results.py`` pins both the
+    degeneracy and the width of the interval it produces, so the artefact
+    cannot be mistaken for a result.
     """
     rng = np.random.default_rng(seed)
     lo_q, hi_q = (1.0 - ci) / 2.0, 1.0 - (1.0 - ci) / 2.0
@@ -402,7 +424,28 @@ def crossover_ratio_bootstrap(
     The full pipeline -- resample power, interpolate crossovers, take the median
     ratio across effects -- is repeated, so the interval covers interpolation
     and median-across-effects variability as well as binomial noise. See
-    :func:`crossover_bootstrap` for what it still does not cover.
+    :func:`crossover_bootstrap` for what it still does not cover, including the
+    independent-resampling artefact that its ``m = 2, 3`` rows measure directly.
+
+    Two further properties of the *point* estimates belong with any reading of
+    them, and :func:`crossover_ratio_summary` reports the counts that expose
+    both.
+
+    A ratio is formed only at effects where *both* detectors cross inside the
+    grid, so the median can rest on very few points -- two of the four effect
+    levels at ``m = 2`` and ``m = 3``, where a "median across effects" is just
+    the midpoint of a pair. And because each column keeps its own surviving
+    subset, the columns are not mutually consistent: at ``m = 5`` the reported
+    ``shared_orbit/full`` is 0.630 while ``(shared_orbit/fundamental) *
+    (fundamental/full)`` is 0.624.
+
+    The same filter runs inside the loop below, so a replicate whose crossover
+    falls out of grid drops that effect from *its* median. The bootstrap
+    distribution therefore mixes medians taken over different effect subsets
+    rather than resampling one fixed estimator. Fixing that means freezing the
+    subset to the one the point estimate uses and discarding replicates that
+    cannot fill it -- which changes the committed intervals, so it is left as a
+    stated defect rather than applied silently here.
     """
     rng = np.random.default_rng(seed)
     lo_q, hi_q = (1.0 - ci) / 2.0, 1.0 - (1.0 - ci) / 2.0

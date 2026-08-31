@@ -32,7 +32,7 @@ from regimeshift.analysis import (
     score_regression_summary,
 )
 from regimeshift.runner import run_grid
-from regimeshift.simulation import build_grid
+from regimeshift.simulation import BASE_SEED, build_grid
 
 pytestmark = pytest.mark.slow
 
@@ -431,3 +431,48 @@ def test_penalty_slope_is_invariant_to_the_split_fraction():
     assert abs(slopes[0.5] - slopes[0.25]) < 0.3
     for slope in slopes.values():
         assert slope == pytest.approx(predicted_slope("full", 4), abs=0.3)
+
+
+def test_including_the_identity_in_the_label_code_cuts_the_raw_null_rate():
+    """Section 9.6 reports what a ``log(g)`` label code does to the raw rule.
+
+    Model C's alternative ranges over nonidentity shifts only, so it is not a
+    proper extension of its own null and ``log(g-1)`` is one convention among
+    several. Encoding ``r`` uniformly over all ``g`` elements costs ``log g``
+    instead. This regenerates the comparison the manuscript quotes, at the
+    weak-effect short-segment corner where the raw rule is worst.
+
+    The point is not that ``log g`` fixes anything -- it does not reach nominal
+    at any group order -- but that a large fraction of the excess at small ``g``
+    is the coding convention rather than the singularity.
+    """
+    from regimeshift.detectors import shared_orbit_detector
+    from regimeshift.scenarios import build_segments
+
+    trials, effect, per_side = 4000, 0.08, 100
+    rng = np.random.default_rng(BASE_SEED)
+    rates = {}
+    for m in (2, 3, 4, 6):
+        p_null = build_segments(m, "exact_orbit", effect).p_null
+        left = rng.multinomial(per_side, p_null, size=trials).astype(float)
+        right = rng.multinomial(per_side, p_null, size=trials).astype(float)
+        gains = np.array(
+            [shared_orbit_detector(left[i], right[i], m).raw_gain for i in range(trials)]
+        )
+        rates[m] = (
+            float(np.mean(gains - np.log(m - 1) > 0)),
+            float(np.mean(gains - np.log(m) > 0)),
+        )
+
+    for m, (implemented, with_identity) in rates.items():
+        assert implemented > 0.10, f"m={m}: the raw rule should be badly off nominal here"
+        assert with_identity < implemented, f"m={m}: log(g) must be the stricter code"
+        assert with_identity > 0.05, f"m={m}: but it does not reach nominal either"
+
+    # the reduction is largest where the implemented cost is smallest
+    assert rates[2][1] / rates[2][0] < 0.5
+    assert rates[6][1] / rates[6][0] > 0.7
+
+    print("\nraw null rate at effect 0.08, 100/side, seed", BASE_SEED)
+    for m, (a, b) in rates.items():
+        print(f"  g={m}: log(g-1) {a:.4f}   log(g) {b:.4f}")

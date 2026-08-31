@@ -231,7 +231,15 @@ The deviation penalty is therefore
 
 $$ \mathrm{pen}_\delta \;=\; \frac{d_{\mathrm{fund}}}{2}\,\log\!\Big(1 + \tau^2\,\frac{L_1L_2}{L_1+L_2}\Big), $$
 
-the isotropic reduction of $\tfrac12\log\det(I + \tau^2 J_{\mathrm{eff}})$. Using
+the isotropic reduction of $\tfrac12\log\det(I + \tau^2 J_{\mathrm{eff}})$.
+Fisher orthonormality holds *at* $\eta = 0$ and does not make the metric globally
+the identity, but the discrepancy is $O(\|\eta\|^2)$ at every group order. Because
+$TB = BR$ the chart metric is equivariant, $I(R\eta) = R^{\top}I(\eta)R$, which
+forces the linear term $A$ to satisfy $A(R\eta) = R^{\top}A(\eta)R$; its trace part
+is a rotation-invariant linear functional on $\mathbb{R}^2$ and so vanishes for
+every $g \ge 2$, while its traceless part survives only at $g = 3$. Since
+$\tfrac12\log\det$ sees a first-order perturbation only through its trace, the
+penalty gap is second order even there. Using
 $L_2$ alone in place of $J_{\mathrm{eff}}$ would be correct only if the shared
 state were known; on a balanced split it overstates the effective information by
 a factor of two and inflates the penalty by $\tfrac{d}{2}\log 2$. That is a
@@ -416,7 +424,7 @@ finite-sample residual length dependence.
 
 **Full (A).** A BIC-scored unrestricted multinomial detector, so all detectors
 are comparable through maximised likelihood plus explicit complexity increments.
-The penalty is the exact known-split increment with $d = g-1$.
+The penalty is the BIC/Laplace known-split increment with $d = g-1$.
 
 **Fundamental (B).** The null fits one $\eta$ to combined counts; the alternative
 fits $\eta_1,\eta_2$ separately. Optimisation is L-BFGS-B with analytic gradients
@@ -446,13 +454,23 @@ precision, which happens *at* the optimum. Observed gradient norms are around
 $5\times10^{-8}$; trusting the flag would give roughly 2.5% false alarms, while a
 relative gradient criterion gives zero failures across the production grid.
 
-When a category has zero count — routine on short segments — the fundamental MLE
-does not exist: the likelihood rises toward the simplex boundary and is
-asymptotically flat along it. Different starts then halt at very different
-coordinates (observed $\|\eta\|$ of 8 versus 15) while agreeing on the
-log-likelihood to six decimals. Detector scores consume only likelihoods and are
-therefore start-independent, but a fitted *coordinate* from a short segment
-should not be interpreted.
+Zero category counts do **not** by themselves break the fundamental MLE, and are
+not routine here either. The family is a linear exponential family with
+sufficient statistic $\bar t = \sum_j f_j B_j$, so the MLE exists exactly when
+$\bar t$ is interior to $\mathrm{conv}\{B_j\}$ — a regular $g$-gon, whose proper
+faces are spanned by cyclically adjacent vertices. Hence: at $g=2$ the MLE exists
+iff both cells are positive; at $g \ge 3$ iff the support lies in neither one
+category nor a cyclically adjacent pair. At $g=4$, $(0,10,10,10)$ and even
+$(10,0,10,0)$ have ordinary finite optima; $(10,10,0,0)$ is the case that fails,
+with the likelihood flat along the escape direction, which is why different
+starts halt at very different coordinates while agreeing on the log-likelihood.
+On the production grid the worst configuration's probability of any empty cell is
+$7.2\times10^{-5}$, for an expected $0.2$ zero-cell segments across all 936,000
+scored — and a genuine failure at that corner needs the whole segment inside two
+adjacent cells, which is bounded by $10^{-37}$. Detector scores consume only
+likelihoods and are
+start-independent regardless; what should not be interpreted is a fitted
+*coordinate* when the criterion fails.
 
 ---
 
@@ -844,8 +862,9 @@ codon reading — for every nonidentity shift at $g = 3,4,6$.
 4. **Identity-information approximation in Model D.** The deviation penalty uses
    the isotropic reduction rather than
    $\tfrac12\log\det(I + \tau^2 J_{\mathrm{eff}})$ with observed information.
-   Fisher orthonormality holds at $\eta = 0$ only, so the two differ at
-   $O(\|\eta\|^2)$: measured against brute-force marginalisation at $g=2$,
+   Fisher orthonormality holds at $\eta = 0$ only; the two differ at
+   $O(\|\eta\|^2)$, derived in §3 above. Measured against brute-force
+   marginalisation at $g=2$,
    $\tau=0.15$, the isotropic form is within 0.003 nats at $\eta=0$ and about
    0.03 nats out at $\|\eta\| = 0.3$. Since Model D's conclusions live in bounded
    terms of order a quarter of a nat, this is not negligible.

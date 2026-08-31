@@ -58,8 +58,17 @@ lemma e_sub (j r : ZMod g) : χ.e (j - r) = χ.e j * (starRingEnd ℂ) (χ.e r) 
 end FundChar
 
 /-- The fundamental logit vector `B η` of Section 5.3. The real and imaginary
-parts of `η` are the cosine and sine coordinates; the `√2` is the scaling that
-makes `‖η‖₂` the Fisher norm of the induced perturbation. -/
+parts of `η` are the cosine and sine coordinates.
+
+The `√2` is the Fisher-orthonormal scaling **for `g ≥ 3`**, where it makes `‖η‖₂`
+the Fisher norm of the induced perturbation. It is *not* the `g = 2` scaling: the
+sign representation is one-dimensional and needs a factor of `1`, which is what
+`fourier_design_matrix(2)` returns in the reference implementation. So at `g = 2`
+this chart is `√2` times the implementation's, and `‖η‖₂` is not its Fisher norm.
+
+Nothing below depends on the choice. Equivariance is invariant under a positive
+rescaling of the logits, so `logit_rotate` and `equivariance` hold for either;
+Fisher orthonormality, which is where the two differ, is not formalised here. -/
 noncomputable def logit (χ : FundChar g) (η : ℂ) : Idx g → ℝ :=
   fun j => Real.sqrt 2 * (η * (starRingEnd ℂ) (χ.e j)).re
 
