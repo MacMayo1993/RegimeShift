@@ -139,22 +139,65 @@ def test_models_a_and_b_are_the_same_detector_at_m_two_and_three():
     assert (wide["full"] != wide["fundamental"]).any()
 
 
-def test_the_independent_ratio_bootstrap_widens_a_constant():
-    """Quantifies the artefact the previous test explains.
+def test_the_paired_bootstrap_gives_a_degenerate_pair_a_degenerate_interval():
+    """The consequence of the previous test, and the check that used to fail.
 
-    ``fundamental/full`` is exactly 1 at ``m = 2, 3``; the committed interval is
-    roughly +-9%. Pinned so the manuscript's caveat cannot drift from its size.
+    ``fundamental/full`` is exactly 1 at ``m = 2, 3`` with no variance, so its
+    interval must be a point. Resampling the detectors independently instead
+    returned roughly +-9% there -- a width invented around a constant, which
+    earlier versions of Section 9.4 read as a check that had passed. Since the
+    run retains the joint detection patterns, the bootstrap resamples them
+    together and the degenerate rows come back exact.
     """
     summary = pd.read_csv(RESULTS / "crossover_ratio_summary.csv")
     boot = pd.read_csv(RESULTS / "crossover_ratio_bootstrap.csv")
     exact = summary[summary["scenario"] == "exact_orbit"].set_index("m")
     exact_boot = boot[boot["scenario"] == "exact_orbit"].set_index("m")
 
+    assert exact_boot["paired"].all(), "the shipped run must carry the joint patterns"
+
     for m in (2, 3):
         assert exact.loc[m, "fundamental/full"] == 1.0
-        low = exact_boot.loc[m, "fundamental/full_ci_low"]
-        high = exact_boot.loc[m, "fundamental/full_ci_high"]
-        assert low < 0.94 and high > 1.06
+        assert exact_boot.loc[m, "fundamental/full_ci_low"] == pytest.approx(1.0)
+        assert exact_boot.loc[m, "fundamental/full_ci_high"] == pytest.approx(1.0)
+
+        # and the two ratios that are the *same* number there now agree exactly,
+        # which independent resampling also got wrong
+        for bound in ("ci_low", "ci_high"):
+            assert exact_boot.loc[m, f"shared_orbit/full_{bound}"] == pytest.approx(
+                exact_boot.loc[m, f"shared_orbit/fundamental_{bound}"]
+            )
+
+
+def test_pairing_narrowed_every_interval_that_carries_content():
+    """The non-degenerate rows tighten too, because the detectors really are
+    positively correlated. Pinned against the widths the independent bootstrap
+    reported, so a regression back to it would be caught."""
+    boot = pd.read_csv(RESULTS / "crossover_ratio_bootstrap.csv")
+    exact = boot[boot["scenario"] == "exact_orbit"].set_index("m")
+
+    independent_widths = {  # what the superseded independent resample gave
+        ("shared_orbit/full", 4): 0.117,
+        ("shared_orbit/fundamental", 6): 0.108,
+        ("fundamental/full", 5): 0.140,
+    }
+    for (label, m), was in independent_widths.items():
+        now = exact.loc[m, f"{label}_ci_high"] - exact.loc[m, f"{label}_ci_low"]
+        assert now < was, f"{label} at m={m}: {now:.3f} should be tighter than {was}"
+
+
+def test_the_advantage_intervals_still_exclude_one():
+    """Narrower intervals must not be narrower in the wrong place: the
+    shared-orbit advantage over both other detectors is still resolved at every
+    group order where the models genuinely differ."""
+    boot = pd.read_csv(RESULTS / "crossover_ratio_bootstrap.csv")
+    exact = boot[boot["scenario"] == "exact_orbit"].set_index("m")
+
+    for m in (2, 3, 4, 5, 6):
+        assert exact.loc[m, "shared_orbit/full_ci_high"] < 1.0
+    for m in (4, 5, 6):
+        assert exact.loc[m, "shared_orbit/fundamental_ci_high"] < 1.0
+        assert exact.loc[m, "fundamental/full_ci_high"] < 1.0
 
 
 def test_the_worst_raw_null_rate_is_not_at_m_two():

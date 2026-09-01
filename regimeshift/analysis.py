@@ -348,27 +348,22 @@ def crossover_bootstrap(
     the *same* simulated datasets and are positively correlated, which makes the
     ratio intervals conservative (too wide) rather than optimistic.
 
-    **How wide, measurably.** The second limitation is not a mild conservatism,
-    and the grid contains its own calibration. At ``m = 2`` and ``m = 3`` the
-    fundamental component spans the whole nontrivial tangent space, so ``full``
-    and ``fundamental`` are the same detector scoring the same datasets: in the
-    committed run their calibrated power agrees *exactly* at every design point.
-    The ``fundamental/full`` ratio is therefore identically 1 with zero
-    variance -- and :func:`crossover_ratio_bootstrap`, which resamples the same
-    way, reports [0.916, 1.098] at ``m = 2`` and [0.926, 1.094] at ``m = 3``,
-    because it draws two independent binomials from one shared power curve.
-    A second symptom in the same row: at ``m = 2``
-    ``shared_orbit/full`` gets [0.695, 0.814] while ``shared_orbit/fundamental``
-    gets [0.701, 0.821], two intervals for what is mathematically one number.
+    **This function still resamples detectors independently, and should not be
+    used for a ratio.** :func:`crossover_ratio_bootstrap` does it jointly; the
+    independence only costs nothing here because each row concerns a single
+    detector, whose marginal binomial is the right draw.
 
-    Read that +-9% as the measured inflation on the rows that carry real
-    content, and do not read the ``m = 2, 3`` rows as a passed check. Removing
-    it needs a *joint* resample of per-dataset detector outcomes, which
-    :mod:`regimeshift.simulation` does not currently retain; that is the natural
-    next revision of this analysis, and it is a change to the runner rather than
-    to this function. ``tests/test_committed_results.py`` pins both the
-    degeneracy and the width of the interval it produces, so the artefact
-    cannot be mistaken for a result.
+    How much it costs on a ratio was measured on this grid, and is why the
+    ratio function no longer works this way. At ``m = 2`` and ``m = 3`` the
+    fundamental component spans the whole nontrivial tangent space, so ``full``
+    and ``fundamental`` are the same detector scoring the same datasets, their
+    calibrated power agrees *exactly* at every design point, and their crossover
+    ratio is identically 1 with zero variance. Independent resampling returned
+    [0.916, 1.098] and [0.926, 1.094] on it, and gave two different intervals --
+    [0.695, 0.814] against [0.701, 0.821] at ``m = 2`` -- for ``shared/full``
+    and ``shared/fundamental``, which are there the same number. That +-9% on a
+    constant is the measured inflation on the rows that do carry content.
+    ``tests/test_committed_results.py`` pins the fixed behaviour.
     """
     rng = np.random.default_rng(seed)
     lo_q, hi_q = (1.0 - ci) / 2.0, 1.0 - (1.0 - ci) / 2.0
@@ -376,6 +371,13 @@ def crossover_bootstrap(
     for (m, scenario, effect, detector), group in results.groupby(
         ["m", "scenario", "effect", "detector"]
     ):
+        # Sort before drawing. `_interpolate_crossover` sorts its own inputs, so
+        # the point estimate is order-independent either way -- but one binomial
+        # is drawn per row below, and on an unsorted group that pairs draws with
+        # lengths arbitrarily, making the intervals depend on the order the rows
+        # were written in. `run_grid` now emits a canonical order; this keeps the
+        # function correct on any frame.
+        group = group.sort_values("total_length")
         lengths = group["total_length"].to_numpy(dtype=float)
         power = group[power_column].to_numpy(dtype=float)
         trials = group["n_alt"].to_numpy(dtype=int)

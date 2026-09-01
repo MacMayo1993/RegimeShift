@@ -26,6 +26,7 @@ from regimeshift.analysis import (
     _has_joint_patterns,
     _pattern_mask,
     crossover_bootstrap,
+    crossover_estimates,
     dimension_increment,
     crossover_ratio_bootstrap,
     gain_residual_regression,
@@ -703,12 +704,77 @@ def test_the_bootstrap_freezes_the_effect_subset():
 
 
 def test_a_results_file_without_pattern_columns_falls_back_and_says_so():
-    """Backwards compatibility: the committed run predates the joint columns,
-    so it must still analyse, by the old independent route, and report that."""
+    """Backwards compatibility: a results file written before the joint columns
+    existed must still analyse, by the old independent route, and say so rather
+    than failing or silently pretending to be paired.
+
+    The shipped run now carries the columns, so the pre-pattern case is made by
+    dropping them -- which is exactly what an older file looks like.
+    """
     path = Path(__file__).resolve().parent.parent / "results" / "v3-production" / "full_results.csv"
     if not path.exists():
         pytest.skip("committed production results are not present")
+    frame = pd.read_csv(path)
 
-    row = crossover_ratio_bootstrap(pd.read_csv(path), n_boot=50).iloc[0]
-    assert not bool(row["paired"])
-    assert np.isfinite(row["shared_orbit/full_ci_low"])
+    paired = crossover_ratio_bootstrap(frame, n_boot=50).iloc[0]
+    assert bool(paired["paired"]), "the shipped run should carry the joint patterns"
+
+    stripped = frame.drop(columns=list(DETECTION_PATTERNS))
+    fallback = crossover_ratio_bootstrap(stripped, n_boot=50).iloc[0]
+    assert not bool(fallback["paired"])
+    assert np.isfinite(fallback["shared_orbit/full_ci_low"])
+
+
+def test_every_analysis_output_is_invariant_to_input_row_order():
+    """Section 8.1 promises results do not depend on grid ordering, worker
+    count or completion order. Rows arrive as workers finish, so that promise
+    is only true if nothing downstream reads the row order.
+
+    It was not. ``_interpolate_crossover`` sorts its own inputs, so the point
+    estimates were safe -- but ``crossover_bootstrap`` draws one binomial per
+    row, and on an unsorted group that paired draws with lengths arbitrarily.
+    The committed run had 18 such groups and a re-run had 117, which is why its
+    intervals moved while every other artefact reproduced exactly.
+
+    Shuffling the input must now change nothing, anywhere.
+    """
+    frame = pd.DataFrame(run_config(Config(4, "exact_orbit", 0.25, 200, n_alt=200, n_null=200)))
+    for length in (400, 800, 1600):
+        frame = pd.concat(
+            [frame, pd.DataFrame(run_config(Config(4, "exact_orbit", 0.25, length,
+                                                   n_alt=200, n_null=200)))],
+            ignore_index=True,
+        )
+    key = ["m", "scenario", "effect", "segment_length", "split_fraction", "detector"]
+    shuffled = frame.sample(frac=1.0, random_state=17).reset_index(drop=True)
+    assert not shuffled[key].equals(frame[key]), "the shuffle must actually reorder rows"
+
+    for name, fn in (
+        ("crossover_estimates", lambda f: crossover_estimates(f)),
+        ("crossover_bootstrap", lambda f: crossover_bootstrap(f, n_boot=40)),
+        ("crossover_ratio_bootstrap", lambda f: crossover_ratio_bootstrap(f, n_boot=40)),
+        ("score_regression_summary", lambda f: score_regression_summary(f)),
+    ):
+        a = fn(frame).reset_index(drop=True)
+        b = fn(shuffled).reset_index(drop=True)
+        pd.testing.assert_frame_equal(a, b, check_exact=False, atol=1e-12,
+                                      obj=f"{name} changed under a row shuffle")
+
+
+def test_run_grid_emits_rows_in_a_canonical_order():
+    """The fix at the source: whatever order workers finish in, the frame the
+    runner returns -- and so the CSV written from it -- is sorted by the design
+    key, which makes the shipped artefact itself reproducible rather than only
+    the analyses that sort defensively."""
+    from regimeshift.runner import run_grid
+
+    configs = build_grid(
+        groups=(4,), scenarios=("exact_orbit",), effects=(0.25,),
+        segment_lengths=(100, 200, 400), n_alt=100, n_null=100,
+    )
+    serial = run_grid(configs, workers=1)
+    parallel = run_grid(configs, workers=3)
+
+    key = ["m", "scenario", "effect", "segment_length", "split_fraction", "detector"]
+    assert serial[key].equals(serial[key].sort_values(key).reset_index(drop=True))
+    pd.testing.assert_frame_equal(serial, parallel)

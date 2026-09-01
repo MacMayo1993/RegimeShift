@@ -103,4 +103,15 @@ def run_grid(
     if not frames:
         return pd.DataFrame()
     combined = pd.concat(frames, ignore_index=True)
-    return combined.drop_duplicates(subset=_COLUMN_KEYS, keep="last").reset_index(drop=True)
+    combined = combined.drop_duplicates(subset=_COLUMN_KEYS, keep="last")
+    # Canonical row order. Rows arrive as workers finish, so without this the
+    # frame -- and the CSV written from it -- is ordered by completion, which
+    # depends on worker count and scheduling. Section 8.1 promises results do
+    # not depend on any of that, and for the point estimates it holds: every
+    # per-configuration seed is content-derived, and `_interpolate_crossover`
+    # sorts its own inputs. But `crossover_bootstrap` draws one random number
+    # per row, so an arbitrary row order silently permutes which draw lands on
+    # which segment length, and its intervals then differ run to run. Sorting
+    # here makes the promise true of every downstream artefact rather than
+    # only of the ones that happen to sort defensively.
+    return combined.sort_values(_COLUMN_KEYS).reset_index(drop=True)

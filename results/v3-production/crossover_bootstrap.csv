@@ -11,7 +11,7 @@ m,scenario,effect,detector,crossover_length,status,ci_low,ci_high,boot_internal_
 2,exact_orbit,0.25,full,200.0,below_grid,,,0.0,500
 2,exact_orbit,0.25,fundamental,200.0,below_grid,,,0.0,500
 2,exact_orbit,0.25,shared_orbit,200.0,below_grid,,,0.0,500
-2,independent_fundamental,0.08,full,1016.3488292899831,internal,927.5339787522412,1090.87453432787,1.0,500
+2,independent_fundamental,0.08,full,1016.3488292899831,internal,929.0898610578448,1090.87453432787,1.0,500
 2,independent_fundamental,0.08,fundamental,1016.3488292899831,internal,925.0591585313522,1096.581710441516,1.0,500
 2,independent_fundamental,0.08,shared_orbit,611.1685254317184,internal,561.1772098005333,663.2729023029733,1.0,500
 2,independent_fundamental,0.12,full,436.4831393534879,internal,383.3701551114389,473.4906801284229,1.0,500
@@ -95,13 +95,13 @@ m,scenario,effect,detector,crossover_length,status,ci_low,ci_high,boot_internal_
 5,exact_orbit,0.25,full,275.52531416646804,internal,251.0387665046725,301.6323587558629,1.0,500
 5,exact_orbit,0.25,fundamental,209.70715249677056,internal,201.3030407450798,232.39514673768429,0.758,500
 5,exact_orbit,0.25,shared_orbit,200.0,below_grid,200.85414355311312,209.69715062074724,0.03,500
-5,higher_mode,0.08,full,2597.743338322701,internal,2382.248199551865,2898.315725644503,1.0,500
+5,higher_mode,0.08,full,2597.743338322701,internal,2401.810513866298,2887.943453955264,1.0,500
 5,higher_mode,0.08,fundamental,,above_grid,,,0.0,500
 5,higher_mode,0.08,shared_orbit,,above_grid,,,0.0,500
-5,higher_mode,0.12,full,1045.3867780019277,internal,979.2428346437237,1113.1550098152659,1.0,500
+5,higher_mode,0.12,full,1045.3867780019277,internal,975.1210860313374,1113.3021887476348,1.0,500
 5,higher_mode,0.12,fundamental,,above_grid,,,0.0,500
 5,higher_mode,0.12,shared_orbit,,above_grid,,,0.0,500
-5,higher_mode,0.18,full,468.1574657756184,internal,433.8795942842511,499.0610213526213,1.0,500
+5,higher_mode,0.18,full,468.1574657756184,internal,433.8795942842511,499.1384836043795,1.0,500
 5,higher_mode,0.18,fundamental,,above_grid,,,0.0,500
 5,higher_mode,0.18,shared_orbit,,above_grid,,,0.0,500
 5,higher_mode,0.25,full,242.7261607560795,internal,224.30604278846084,258.6987437099255,1.0,500

@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-08-05T19:55:23+00:00",
+  "generated_utc": "2026-09-01T07:33:25+00:00",
   "grid": "production",
   "design": {
     "groups": [
@@ -36,27 +36,39 @@
   "detector_rows": 936,
   "simulated_datasets": 468000,
   "workers": 4,
-  "elapsed_seconds": 1045.3,
+  "elapsed_seconds": 33476.9,
   "report_units": "nats",
   "bootstrap_replicates": 500,
   "git": {
-    "commit": "afd8f2da362bd11d68d33576e4e561931f276105",
-    "dirty": true
+    "commit": "9e66fdd6ab56ff86c1bbeb900a02c462c32377e6",
+    "dirty": true,
+    "tracked_diff_sha256": "f6057d862f23b40f73c821dc5b228c0d627527ede7d87efe984f3d0e4e9aa858",
+    "status_lines": [
+      " M regimeshift/analysis.py",
+      " M regimeshift/runner.py",
+      " M results/v3-production/crossover_bootstrap.csv",
+      " M results/v3-production/crossover_ratio_bootstrap.csv",
+      " M results/v3-production/full_results.csv",
+      " M results/v3-production/run_manifest.json",
+      " M results/v3-production/score_regression_summary.csv",
+      " M tests/test_analysis_integrity.py"
+    ],
+    "untracked": []
   },
   "environment": {
     "regimeshift": "3.1.0",
-    "python": "3.11.15",
-    "platform": "Linux-6.18.5-fc-v18-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "platform": "Linux-6.18.44-fc-v22-x86_64-with-glibc2.39",
     "machine": "x86_64",
     "packages": {
-      "numpy": "2.4.6",
-      "scipy": "1.17.1",
+      "numpy": "2.5.2",
+      "scipy": "1.18.1",
       "pandas": "3.0.5"
     }
   },
   "files": {
     "crossover_bootstrap.csv": {
-      "sha256": "5aa565f5df7e7b9c4aed0861527a19efcd0c3d7d326d9f2c5e1dbf646107fc3b",
+      "sha256": "0c4331c7d22466403063908b8b568c08c03d5130bd2d092563278d5b65468d9e",
       "bytes": 14721
     },
     "crossover_estimates.csv": {
@@ -64,20 +76,20 @@
       "bytes": 12284
     },
     "crossover_ratio_bootstrap.csv": {
-      "sha256": "6351c24c2cdd597e71ca8c7333105d69d02fc97b0800a903bffc2776eada0fbb",
-      "bytes": 2106
+      "sha256": "e3ac928fce6c18a9bf9956eaebc6f4a0fb45752efd356ccb60306aca77813a6d",
+      "bytes": 2150
     },
     "crossover_ratio_summary.csv": {
       "sha256": "fbbfdfc3749f0b1bb6ad703d0cfd3a918e02e646a180d069be3401384a54b92e",
       "bytes": 1063
     },
     "full_results.csv": {
-      "sha256": "2ed4233bbd61c55c84653c635f9967682b4a03c7cebc5c2c83141e67eb410535",
-      "bytes": 202298
+      "sha256": "aa5e556fcf695638fcc8c8b9fccc1064e901e7daea4508999353005c6ec49aa2",
+      "bytes": 221858
     },
     "score_regression_summary.csv": {
-      "sha256": "77fb69f96b54d18fa4423bd2627d678f2dbd2e1f531bfb907fb40358dac2355a",
-      "bytes": 3952
+      "sha256": "ba9c5c7168ef4760087217a18df12d83f3018dea16e7e79f3a57edaed32c6961",
+      "bytes": 3949
     }
   }
 }

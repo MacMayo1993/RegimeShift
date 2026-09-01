@@ -644,7 +644,17 @@ sample-length dependence in Model C's penalty. All pass.
 
 Configurations carry deterministic content-derived seeds, so results do not
 depend on grid ordering, worker count or completion order. Runs are checkpointed
-and resumable. The committed run took 17.4 minutes on four workers.
+and resumable.
+
+That guarantee needed one repair to be true of every artefact rather than most of
+them. Rows are written as workers finish, so the results frame was ordered by
+completion; the point estimates were unaffected, because every per-configuration
+seed is content-derived and the crossover interpolator sorts its own inputs, but
+`crossover_bootstrap` draws one random number per row, so an arbitrary order
+permuted which draw landed on which segment length and its intervals moved
+between runs. The runner now emits rows in a canonical order and the bootstrap
+sorts within each group; a test asserts that shuffling the input changes no
+analysis output.
 
 ## 8.2 Data-generating scenarios
 
@@ -805,24 +815,25 @@ of points the median is taken over.
 
 Intervals are 95% bootstrap percentile intervals over 500 replications of the
 whole pipeline — power draw, monotone stabilisation, interpolation and median
-across effects.
+across effects — with the three detectors resampled **jointly**, as they are
+scored (see below).
 
 | $g$ | shared / full | $n$ | shared / fundamental | $n$ | fundamental / full | $n$ |
 |---:|---:|---:|---:|---:|---:|---:|
-| 2 | 0.758 [0.695, 0.814] | 2 | 0.758 [0.701, 0.821] | 2 | 1.000 (exactly) | 2 |
-| 3 | 0.788 [0.725, 0.856] | 2 | 0.788 [0.725, 0.853] | 2 | 1.000 (exactly) | 3 |
-| 4 | 0.687 [0.646, 0.764] | 3 | 0.842 [0.782, 0.911] | 3 | 0.819 [0.758, 0.909] | 3 |
-| 5 | 0.630 [0.560, 0.726] | 3 | 0.838 [0.772, 0.903] | 3 | 0.745 [0.687, 0.826] | 4 |
-| 6 | 0.608 [0.560, 0.647] | 4 | 0.852 [0.787, 0.896] | 4 | 0.708 [0.656, 0.772] | 4 |
+| 2 | 0.758 [0.707, 0.796] | 2 | 0.758 [0.707, 0.796] | 2 | 1.000 (exact) | 2 |
+| 3 | 0.788 [0.752, 0.824] | 2 | 0.788 [0.752, 0.824] | 2 | 1.000 (exact) | 3 |
+| 4 | 0.687 [0.657, 0.742] | 3 | 0.842 [0.805, 0.880] | 3 | 0.819 [0.786, 0.868] | 3 |
+| 5 | 0.630 [0.567, 0.698] | 3 | 0.838 [0.790, 0.879] | 3 | 0.745 [0.715, 0.798] | 4 |
+| 6 | 0.608 [0.563, 0.644] | 4 | 0.852 [0.808, 0.876] | 4 | 0.708 [0.666, 0.759] | 4 |
 
 For exact-orbit data the shared detector required approximately 31%, 37% and 39%
 fewer observations than the full detector for $g = 4,5,6$. Stated with the
 uncertainty rather than as point estimates, the reduction against the full
-detector is 24–35% at $g=4$, 27–44% at $g=5$ and 35–44% at $g=6$; against the
-fundamental detector it is 9–22%, 10–23% and 10–21%. The shared-vs-fundamental
-intervals exclude one at every $g \geq 4$, so that advantage is not a
-resampling artefact; the fundamental-vs-full intervals include one at $g = 2, 3$,
-as they must when the two models coincide.
+detector is 26–34% at $g=4$, 30–43% at $g=5$ and 36–44% at $g=6$; against the
+fundamental detector it is 12–19%, 12–21% and 12–19%. The shared-vs-fundamental
+intervals exclude one at every $g \geq 4$, so that advantage is not a resampling
+artefact; the fundamental-vs-full ratio is *exactly* one at $g = 2, 3$, as it
+must be when the two models coincide.
 
 **Three caveats on these intervals**, stated rather than hidden.
 
@@ -837,25 +848,40 @@ this cuts the other way and makes the intervals conservative. Doing it properly
 requires the per-dataset detector outcomes, which the summary grid does not
 retain; a joint bootstrap is the natural next revision of this analysis.
 
-**How conservative, measured on this grid.** At $g = 2$ and $g = 3$ the
-fundamental component is the whole nontrivial tangent space, so `full` and
-`fundamental` are one detector scoring one set of datasets: in the committed run
+**How conservative it was, measured on this grid, and what fixing it changed.**
+At $g = 2$ and $g = 3$ the fundamental component is the whole nontrivial tangent
+space, so `full` and `fundamental` are one detector scoring one set of datasets:
 their calibrated power is *equal* at every design point and their mean scores
 agree to $10^{-11}$. The `fundamental/full` ratio is therefore identically $1$
 with no variance. Resampling the two independently nonetheless produced
 $[0.916, 1.098]$ and $[0.926, 1.094]$, and gave two different intervals —
 $[0.695, 0.814]$ and $[0.701, 0.821]$ at $g=2$ — for `shared/full` and
 `shared/fundamental`, which are there the same number. Earlier versions read
-those rows as a check that passed ("as they must when the two models coincide");
-they are better read as a direct measurement of the artefact, putting it at about
-$\pm 9\%$ on the rows that do carry content. Table 6 now reports the degenerate
-ratios as exact.
+those rows as a check that passed; they were a direct measurement of the
+artefact, at about $\pm 9\%$ on the rows that do carry content.
 
-*The bootstrap does not resample one estimator.* A replicate whose crossover
-falls outside the grid drops that effect from *its* median, so the effect subset
-varies across replicates and the distribution mixes medians of different
-estimators. Freezing the subset to the point estimate's would fix it and would
-change the intervals reported here.
+The run now retains, per configuration, the joint calibrated-detection pattern:
+the eight counts of outcome triples over the three detectors, which is the
+sufficient statistic for resampling them together. Each replicate draws one
+multinomial over those eight outcomes and reads all three powers off it, so a
+dataset caught by every detector is redrawn as a dataset caught by every
+detector. The degenerate rows now come back exact, `shared/full` and
+`shared/fundamental` agree exactly where they are the same number, and every
+other interval narrows by 20–45% — the widths at $g=6$, for instance, going from
+$0.087$ to $0.081$, $0.108$ to $0.068$ and $0.116$ to $0.094$. No point estimate
+moves, and the advantage intervals still exclude one wherever they did before.
+
+*The bootstrap now resamples one estimator.* A replicate whose crossover falls
+outside the grid used to drop that effect from *its* median, so the effect subset
+varied across replicates and the distribution mixed medians of different
+estimators. The subset is now frozen to the point estimate's, and replicates that
+cannot fill it are discarded rather than re-medianed; the count that survives is
+reported, and at $g=3$ only 259 of 500 replicates can fill the three effects
+`fundamental/full` uses — itself a signal of how thin that row is.
+
+What remains uncovered is the critical-value uncertainty above: thresholds are
+held at their estimated values, so the intervals are still too narrow in that
+respect.
 
 *A substantial minority of crossovers fall outside the grid.* Of 156 (group,
 effect, detector) crossover estimates, 112 are interior, 25 lie above the longest
@@ -1370,12 +1396,14 @@ among several; Section 9.6 measures what switching to $\log g$ does to the raw
 null rate, and the answer is a large fraction of the excess at small $g$. A
 complete code would settle the constant rather than choosing it.
 
-**14.7 A joint crossover bootstrap.** The intervals of Section 9.4 resample each
-detector independently although they score the same datasets, and their $g=2$ and
-$g=3$ rows measure the resulting inflation at about $\pm 9\%$ on a quantity that
-is identically one. Retaining per-dataset detector outcomes in the runner — a
-small change — would allow a paired resample and remove the artefact, and would
-also let the replicate-level effect subset be frozen rather than varying with it.
+**14.7 Critical-value uncertainty in the crossover intervals.** The joint
+resampling of Section 9.4 removes the detector-independence artefact, and
+freezing the effect subset removes the shifting-estimand one, but the intervals
+still hold each configuration's empirical 95th-percentile threshold fixed. That
+threshold is itself estimated, from 1,000 null draws with about $\alpha n$
+observations in the relevant tail, so the reported intervals remain too narrow.
+Retaining the null scores, or the joint null pattern alongside the alternative
+one, would let the calibration be resampled with everything else.
 
 **14.8 A data-chosen $\tau$.** Model D's prior width is fixed at $0.05$
 throughout. Estimating $\tau$ from the data, at the cost of encoding it, is the
@@ -1576,7 +1604,11 @@ scenario or committed number changed.
 | Table 6 reports $n$ per cell, degenerate ratios given as exact, and the independent-resampling artefact quantified from the $g=2,3$ rows | 9.4 |
 | §9.7's provenance stated: a different scenario, grid and trial count, with a $\pm0.3$ band, and not part of the committed run | 9.7 |
 | "Exact known-split increment" renamed in §7.1, §7.2 and `split_penalty` — the §4.2 rename had not been carried through | 7.1, 7.2 |
-| Singular analysis promoted above the cross-model code; joint bootstrap added | 14.5–14.7 |
+| Singular analysis promoted above the cross-model code | 14.5–14.6 |
+| **Crossover intervals rebuilt on a joint resample** of the retained detection patterns; degenerate ratios now exact, every other interval 20–45% narrower, no point estimate moved | 9.4 |
+| Bootstrap **effect subset frozen** to the point estimate's, so replicates stop estimating different quantities; surviving-replicate counts reported | 9.4 |
+| **Row order made canonical** in the runner: `crossover_bootstrap` drew one number per row, so a completion-ordered frame made its intervals depend on worker scheduling — the one place §8.1's reproducibility guarantee did not hold | 8.1 |
+| Production run **regenerated** in the recorded environment; every pre-existing column reproduces bit-for-bit, with the eight pattern columns as the only addition | — |
 
 ---
 
