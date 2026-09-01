@@ -225,3 +225,58 @@ def test_large_local_states_return_the_detector_to_regular_behaviour(m):
     far = collapse_law(m, h=far_h, reps=60_000, rng=np.random.default_rng(1))
     assert far.mean() < near.mean() - 1.0
     assert np.quantile(far, 0.95) < np.quantile(near, 0.95)
+
+
+# ---------------------------------------------------------------------------
+# Corollary 3: the zero-threshold rate at collapse is exactly (g-1)/g
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("m", [2, 3, 4, 5, 6, 7, 8])
+def test_zero_threshold_rate_at_collapse_is_g_minus_one_over_g(m):
+    """An exact identity, not a simulated quantity.
+
+    At collapse the aligned energies differ only in their cross term, so the
+    argmax over all ``g`` shifts is cyclically exchangeable and each is equally
+    likely to win. The raw gain is positive exactly when a nonidentity shift
+    wins, which is ``g-1`` times out of ``g``.
+    """
+    draws = collapse_law(m, reps=400_000, rng=np.random.default_rng(1000 + m))
+    assert float(np.mean(draws > 0)) == pytest.approx((m - 1) / m, abs=0.003)
+
+
+@pytest.mark.parametrize("m", [3, 4, 6])
+@pytest.mark.parametrize("rho", [0.5, 0.25, 0.1, 0.75])
+def test_that_rate_does_not_depend_on_the_split_fraction(m, rho):
+    """The corollary holds for every ``rho``, because
+    ``A_r = rho|U1|^2 + (1-rho)|U2|^2 + 2 sqrt(rho(1-rho)) U1'R^-r U2`` and only
+    the cross term carries ``r`` -- so the *event* ``{W > 0}`` is free of rho."""
+    draws = collapse_law(m, rho=rho, reps=400_000, rng=np.random.default_rng(1000 + m))
+    assert float(np.mean(draws > 0)) == pytest.approx((m - 1) / m, abs=0.003)
+
+
+@pytest.mark.parametrize("m", [3, 5])
+def test_the_argmax_over_shifts_is_uniform_at_collapse(m):
+    """The mechanism behind Corollary 3, checked directly: every shift including
+    the identity is equally likely to maximise the aligned energy."""
+    from regimeshift.fourier import rotation_matrix
+
+    d = fundamental_dimension(m)
+    reps = 400_000
+    rng = np.random.default_rng(7)
+    U1 = rng.normal(size=(reps, d))
+    U2 = rng.normal(size=(reps, d))
+    energies = np.stack(
+        [np.sum((U1 + U2 @ rotation_matrix(m, -r).T) ** 2, axis=1) for r in range(m)], axis=1
+    )
+    shares = np.bincount(energies.argmax(axis=1), minlength=m) / reps
+    np.testing.assert_allclose(shares, np.full(m, 1.0 / m), atol=0.004)
+
+
+@pytest.mark.parametrize("m", [2, 3, 4, 5, 6])
+def test_the_level_threshold_sits_well_above_the_codelength(m):
+    """Quantifies the gap the paper quotes: 1.0 to 1.8 nats between the
+    level-0.05 critical value and the two-part label cost."""
+    q95 = critical_value(m, reps=400_000, rng=np.random.default_rng(20260713 + m))
+    gap = q95 - label_cost(m)
+    assert 1.0 <= gap <= 1.8, f"g={m}: gap {gap}"

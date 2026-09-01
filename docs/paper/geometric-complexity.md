@@ -13,16 +13,18 @@ continuous state differing by a finite group action. At a known boundary these
 cost $\tfrac{g-1}{2}\log L$, $\tfrac{d_{\mathrm{fund}}}{2}\log L$ and — because
 the shared-orbit alternative introduces no continuous parameter — only $O(1)$.
 
-That $O(1)$ regime is the substance of the paper. Orbit collapse turns out not to
-be a singularity: the alternative is a finite union of regular branches, so the
-real log canonical threshold is unchanged and the zero increment survives. What
-changes is that the profiled gain acquires a nondegenerate $O_p(1)$ limit, a
-maximum over the nonidentity shifts of differences of Gaussian projection
-energies. We derive that law, validate it against the detector, and draw two
-consequences: it supplies asymptotic critical values, making the statistic
-operational; and it shows that no constant label cost controls the raw decision
-rule, the two-part $\log(g-1)$ leaving a firing rate of 0.14 to 0.50 at collapse.
-The naive MDL threshold is not a usable decision rule here.
+That $O(1)$ regime is the substance of the paper. Orbit collapse is a *benign
+finite-branch singularity*: the relative label is nonidentifiable where the
+branches meet, so the union is singular as a statistical model, but every fixed
+branch has nonsingular Fisher information and the marginal likelihood is a finite
+sum of regular Laplace integrals. The real log canonical threshold is therefore
+unchanged and the zero increment survives; what collapse alters is the bounded
+term and the limiting law. We derive that law — a maximum over the nonidentity
+shifts of differences of Gaussian projection energies — prove it, and validate it
+against the detector. Two consequences follow. It supplies asymptotic critical
+values, making the statistic operational. And it shows that the two-part
+$\log(g-1)$ leaves a false-alarm probability that does not vanish: exactly
+$(g-1)/g$ at a zero threshold, and 0.14 to 0.50 at the label cost itself.
 
 A 468,000-dataset study over $C_2$ through $C_6$ accompanies this. Calibrated at
 a common 5%, the shared-orbit detector needs roughly 31–39% fewer observations
@@ -89,7 +91,10 @@ are:
 5. a model-selection procedure that identifies the geometry from data rather
    than assuming it;
 6. a negative result: the two-part label constant does not control the raw
-   decision rule near orbit collapse, and no constant can.
+   decision rule near orbit collapse. A constant *can* fix a chosen asymptotic
+   level — that is what Corollary 2 supplies — but no finite constant makes the
+   false-alarm probability vanish there, and the structural constant is a nat or
+   more short of even the level-$0.05$ threshold.
 
 The analysis is explicitly an offline **known-boundary** model comparison. It is
 not a changepoint-discovery algorithm. Unknown-boundary scanning and online
@@ -136,9 +141,10 @@ it. That is a different question from ours — theirs is a sequential testing
 problem with no coding component, ours a fixed-boundary description-length
 comparison across a hierarchy of alternatives — but the group being quotiented is
 the same one. We do **not** claim Model C's statistic is the maximal-invariant
-likelihood ratio: by Wijsman's representation that ratio *averages* the densities
-over the group, whereas Model C aligns and profiles, then *maximises* over the
-nonidentity elements. Those are different statistics, and establishing a
+likelihood ratio: by Wijsman's representation [23] — see also Eaton [12] — that
+ratio *averages* the densities over the group with respect to Haar measure,
+whereas Model C aligns and profiles, then *maximises* over the nonidentity
+elements. Those are different statistics, and establishing a
 correspondence would take an argument this paper does not give. Their framework
 remains the most promising route to a sequential version of this comparison, one
 that would not depend on a known boundary or on two-part boundary coding;
@@ -283,11 +289,12 @@ label is fixed as a gauge.
 Assumption 2 is the one that bites. At $\eta = 0$ the orbit collapses to a point,
 every $R^s$ acts trivially, and the parameter is a fixed point of the whole group;
 more generally at any $\eta$ with a nontrivial stabiliser the shift is not
-identifiable. Section 6.3 shows that this is *not* a singularity in the sense of
-Watanabe [7,8] and Drton–Plummer [9] — the alternative is a finite union of
-regular branches, and the zero increment survives — but the label does become
-uninformative there, and Section 6.4 derives the nondegenerate $O_p(1)$ law that
-results. Section 9.1 shows what that does to the raw rule in practice. At $g=2$
+identifiable, so the model is singular there in the sense of Watanabe [7,8] and
+Drton–Plummer [9]. Section 6.3 shows the singularity is benign: the alternative is
+a finite union of branches each with nonsingular Fisher information, the real log
+canonical threshold is unchanged, and the zero increment survives. What collapse
+alters is the bounded term, and Section 6.4 derives the nondegenerate $O_p(1)$
+law that governs it. Section 9.1 shows what that does to the raw rule in practice. At $g=2$
 there is a single nonidentity shift and the label cost is $\log 1 = 0$.
 
 ## 3.4 Model D: approximate orbit
@@ -497,41 +504,52 @@ by optimising the corresponding population log-likelihood.
 ## 6.2 Local detection laws
 
 If $G_M \approx c_M \epsilon^2$, the regular models have boundaries
-$\epsilon^2 \sim \tfrac{d}{2}\,\tfrac{\log L}{L}$, while for a regular
-shared-orbit stratum with fixed $g$ and an explicit label code
-$\epsilon^2 \sim \tfrac{\log(g-1)}{L}$. The stronger $L^{-1}$ scaling of Model C
-arises not merely from a smaller tangent space, but from *sharing the continuous
-state across the boundary*.
+$\epsilon^2 \sim \tfrac{d}{2}\,\tfrac{\log L}{L}$. For Model C, *any* fixed code
+constant $c$ gives a deterministic crossing at $\epsilon^2 \sim c/L$, so the
+scaling is $O(L^{-1})$ rather than $O(L^{-1}\log L)$ — the improvement comes from
+*sharing the continuous state across the boundary*, not merely from a smaller
+tangent space.
 
-## 6.3 Orbit collapse is a finite union, not a singularity
+That is a statement about where the mean gain crosses a constant, and it is not a
+detection boundary. The raw rule with constant $c$ has an asymptotic false-alarm
+rate of $\Pr(W_{g,\rho}(h) > c)$, which by Section 6.4 does not vanish; at $g=2$
+the natural constant is $\log 1 = 0$ and the crossing statement degenerates
+entirely. Level-$\alpha$ local power for Model C is governed by the quantiles of
+$W_{g,\rho}(h)$, and is properly stated there.
+
+## 6.3 Orbit collapse is a benign finite-branch singularity
 
 At $\eta = 0$ all orbit elements coincide and the relative label is
-unidentifiable. It is tempting to read that as putting Model C outside regular
-asymptotics altogether, but the geometry says otherwise, and getting this right
-is what makes the next subsection possible.
+unidentifiable, so the map $(\eta, r) \mapsto P_{\eta,r}$ is not one-to-one
+there: the $g-1$ points $(0, r)$ index the same distribution. Under the standard
+definition — a one-to-one parameterisation with positive-definite Fisher
+information [8] — **Model C is therefore singular at collapse**, and calling it
+regular would be wrong.
 
-For each *fixed* nonidentity $r$, the map
+The singularity is nonetheless benign, in a way that matters for everything that
+follows. For each *fixed* nonidentity $r$, the map
 $\eta \mapsto \big(p(\eta),\, p(R^r\eta)\big)$ is a smooth
 $d_{\mathrm{fund}}$-dimensional family with positive-definite quadratic
 Kullback–Leibler expansion at the origin. Nothing about it degenerates. Model C's
 parameter space is the *union* of the $g-1$ such branches, all passing through
 the same point $(u,u)$, and the null is a further $d_{\mathrm{fund}}$-dimensional
-manifold through it. A finite union of regular branches has the regular leading
-exponent: the marginal likelihood is a finite sum of Laplace integrals, each of
-order $L^{-d_{\mathrm{fund}}/2}$, and the branch multiplicity moves into the
-bounded term. So the real log canonical threshold is
-$\lambda = d_{\mathrm{fund}}/2$ on both sides, giving
+manifold through it. Every branch has nonsingular Fisher information; what fails
+is only identifiability *between* branches, and at a single point. The
+Kullback–Leibler zero set at collapse is the finite set $\{(0,r)\}$ of isolated,
+non-degenerate zeros, so the marginal likelihood is a finite sum of ordinary
+Laplace integrals, each of order $L^{-d_{\mathrm{fund}}/2}$, and the branch
+multiplicity enters the constant rather than the exponent. The real log canonical
+threshold is thus $\lambda = d_{\mathrm{fund}}/2$ on both sides, giving
 
 $$ \Delta\lambda_C \;=\; 0 $$
 
-**at collapse as well as on a regular orbit.** Proposition 1's zero increment
-survives the point that appeared to threaten it, and no new $\log L$ coefficient
-appears anywhere.
-
-What *does* happen at collapse is that the profiled log-likelihood gain stops
-converging to zero and acquires a nondegenerate $O_p(1)$ law. That law is the
-subject of Section 6.4, and it is where the paper's negative result about MDL
-thresholding comes from.
+**at collapse as well as on a regular orbit.** So the singularity does not
+disturb the $\log L$ coefficient: Proposition 1's zero increment survives the
+point that appeared to threaten it. What collapse changes is the bounded term and
+the limiting law of the statistic — and that is not a technicality, because for
+Model C the bounded term is the entire penalty. Section 6.4 derives the law, and
+it is where the paper's negative result about two-part MDL thresholding comes
+from.
 
 The only collapsed state in this family is the origin. A nonidentity element of
 $C_g$ acts on $V_{\mathrm{fund}}$ as a rotation by $2\pi r/g \neq 0$, so
@@ -547,11 +565,46 @@ $\eta_L = h/\sqrt{L}$, so that $h = 0$ is exact collapse and large $\|h\|$ is a
 regular orbit state. Let $U_1, U_2 \sim N(0, I_{d_{\mathrm{fund}}})$ be the two
 segments' normalised scores, and $w_r = R^r h - h$.
 
+Assume throughout that $L_1, L_2 \to \infty$ with $L_1/L \to \rho \in (0,1)$; that
+$g$ and $h$ are fixed; and that the chart of Section 5.3 is used, so the family is
+a smooth exponential family with Fisher information continuous at the origin and
+$I(0) = I_{d_{\mathrm{fund}}}$.
+
 > **Theorem 1 (local law for the shared-orbit statistic).** Under the null of no
 > change with shared state $\eta_L = h/\sqrt{L}$, the shared-orbit raw gain
 > converges in distribution to
 >
 > $$ W_{g,\rho}(h) \;=\; \max_{r \neq e}\Big[ \tfrac12\big\|\sqrt{\rho}\,U_1 + \sqrt{1-\rho}\,R^{-r}U_2 - (1-\rho)R^{-r}w_r\big\|^2 \;-\; \tfrac12\big\|\sqrt{\rho}\,U_1 + \sqrt{1-\rho}\,U_2\big\|^2 \;+\; \sqrt{1-\rho}\,U_2^{\top}w_r \;-\; \tfrac{1-\rho}{2}\|w_r\|^2 \Big]. $$
+
+*Proof.* Write $w_r = R^r h - h$ and reparameterise the shared state as
+$\eta_1 = (h+t)/\sqrt{L}$, so that under shift $r$ the two segments sit at local
+displacements $t/\sqrt{L}$ and $(w_r + R^r t)/\sqrt{L}$ from the truth.
+
+By local asymptotic normality, for each segment and uniformly on compact sets of
+$t$,
+$$ \ell_i\big(\eta_L + \Delta_i/\sqrt{L}\big) - \ell_i(\eta_L) \;=\; \sqrt{\rho_i}\,U_i^{\top}\Delta_i \;-\; \tfrac{\rho_i}{2}\,\Delta_i^{\top}I(\eta_L)\,\Delta_i \;+\; o_P(1), $$
+with $\rho_1 = \rho$, $\rho_2 = 1-\rho$, and $U_i = S_i/\sqrt{L_i}$ the normalised
+score. The two segments are independent, $\eta_L \to 0$, and $I$ is continuous
+with $I(0) = I$, so the joint central limit theorem gives
+$(U_1, U_2) \Rightarrow N(0, I_{2d_{\mathrm{fund}}})$ and $I(\eta_L) \to I$.
+
+Under the null ($r = e$, $w_e = 0$) both displacements equal $t$, the quadratic
+coefficients combine as $\rho/2 + (1-\rho)/2 = 1/2$, and the profiled objective is
+$$ \big(\sqrt{\rho}\,U_1 + \sqrt{1-\rho}\,U_2\big)^{\top}t \;-\; \tfrac12\|t\|^2 \;+\; o_P(1), $$
+whose maximiser is $O_P(1)$ — so the expansion applies where it is used — and
+whose maximum is $\tfrac12\|\sqrt{\rho}U_1 + \sqrt{1-\rho}U_2\|^2 + o_P(1)$.
+
+Under a fixed $r \neq e$, substituting $\Delta_2 = w_r + R^r t$ and using
+$w_r^{\top}R^r t = (R^{-r}w_r)^{\top}t$ gives
+$$ \big(\sqrt{\rho}\,U_1 + \sqrt{1-\rho}\,R^{-r}U_2 - (1-\rho)R^{-r}w_r\big)^{\top} t \;-\; \tfrac12\|t\|^2 \;+\; \sqrt{1-\rho}\,U_2^{\top}w_r \;-\; \tfrac{1-\rho}{2}\|w_r\|^2 \;+\; o_P(1), $$
+with maximum
+$\tfrac12\|\sqrt{\rho}U_1 + \sqrt{1-\rho}R^{-r}U_2 - (1-\rho)R^{-r}w_r\|^2
++ \sqrt{1-\rho}U_2^{\top}w_r - \tfrac{1-\rho}{2}\|w_r\|^2 + o_P(1)$.
+
+The detector's raw gain is the maximum over the $g-1$ nonidentity shifts of the
+second display minus the first. The index set is finite and the maximum is a
+continuous function of $(U_1, U_2)$, so the continuous mapping theorem delivers
+the stated limit. $\square$
 
 > **Corollary 1 (exact collapse).** At $h = 0$ every $w_r$ vanishes and the limit
 > is a difference of Gaussian projection energies,
@@ -580,16 +633,44 @@ everywhere off collapse.
 > $1-\alpha$ quantile of $W_{g,\rho}(0)$ is a pointwise asymptotic level-$\alpha$
 > critical value for the raw shared-orbit gain at collapse.
 
-**Table 2.** Quantiles of $W_{g,1/2}(0)$, from 400,000 draws at the base seed
-(`regimeshift/collapse.py`).
+One feature of the collapse law is available in closed form, and it is the one
+that does the most work later.
 
-| $g$ | mean | $q_{0.95}$ | $q_{0.99}$ | $\Pr(W > 0)$ |
+> **Corollary 3 (zero-threshold rate at collapse).** For every $g \geq 2$ and
+> every $\rho \in (0,1)$,
+> $$ \Pr\big(W_{g,\rho}(0) > 0\big) \;=\; \frac{g-1}{g}. $$
+
+*Proof.* For $r = 0,\dots,g-1$ put
+$A_r = \|\sqrt{\rho}U_1 + \sqrt{1-\rho}R^{-r}U_2\|^2$, so that
+$W_{g,\rho}(0) = \tfrac12\big(\max_{r\neq e}A_r - A_0\big)$. Expanding,
+$$ A_r \;=\; \rho\|U_1\|^2 \;+\; (1-\rho)\|U_2\|^2 \;+\; 2\sqrt{\rho(1-\rho)}\;U_1^{\top}R^{-r}U_2, $$
+in which only the cross term depends on $r$. Hence
+$\arg\max_r A_r = \arg\max_r U_1^{\top}R^{-r}U_2$ and the event
+$\{W_{g,\rho}(0) > 0\} = \{\arg\max_r A_r \neq e\}$ does not depend on $\rho$ at
+all. The map $U_2 \mapsto R^{-1}U_2$ preserves the standard Gaussian law and
+independence from $U_1$, and carries $A_r$ to $A_{r+1 \bmod g}$, so
+$(A_0,\dots,A_{g-1})$ is cyclically exchangeable; ties have probability zero.
+Each index is therefore equally likely to be the unique maximiser, giving
+$\Pr(\arg\max = e) = 1/g$. $\square$
+
+Equivalently: at collapse the raw gain is positive exactly when some nonidentity
+shift aligns the two segments' scores better than the identity does, and by
+symmetry that happens $g-1$ times out of $g$. The rate is $1/2$ at $g=2$ and
+climbs toward $1$; it is a property of the geometry, not of the sample size.
+
+**Table 2.** The collapse law $W_{g,1/2}(0)$: quantiles from 400,000 draws at the
+base seed (`regimeshift/collapse.py`), and the exact rate from Corollary 3.
+
+| $g$ | mean | $q_{0.95}$ | $q_{0.99}$ | $\Pr(W > 0) = \tfrac{g-1}{g}$ |
 |---:|---:|---:|---:|---:|
-| 2 | $-0.002$ | 1.596 | 2.980 | 0.500 |
-| 3 | 0.434 | 2.463 | 3.889 | 0.667 |
-| 4 | 0.604 | 2.520 | 4.049 | 0.751 |
-| 5 | 0.679 | 2.584 | 4.155 | 0.800 |
-| 6 | 0.716 | 2.610 | 4.189 | 0.834 |
+| 2 | $-0.002$ | 1.596 | 2.980 | 0.5000 |
+| 3 | 0.434 | 2.463 | 3.889 | 0.6667 |
+| 4 | 0.604 | 2.520 | 4.049 | 0.7500 |
+| 5 | 0.679 | 2.584 | 4.155 | 0.8000 |
+| 6 | 0.716 | 2.610 | 4.189 | 0.8333 |
+
+The simulated rates agree with the exact column to within $0.0011$ at 400,000
+draws, which is a check on the implementation rather than on the corollary.
 
 These are **critical values, not codelength constants**. They are defined by a
 chosen error rate and move with $\alpha$ — $q_{0.99}$ is more than a nat above
@@ -880,9 +961,16 @@ of Table 2 for comparison.
 
 Neither convention is close. Including the identity in the label code helps and
 does not rescue: it moves $g=2$ from $0.50$ to $0.16$ and $g=6$ from $0.14$ to
-$0.12$, still two to three times any nominal level, and the level-$0.05$
-threshold sits a nat or more above either. The gap is asymptotic, not a
-small-sample artefact.
+$0.12$, still two to three times the chosen 5% level, and the level-$0.05$
+threshold sits between $1.00$ and $1.77$ nats above $\log(g-1)$. The gap is
+asymptotic, not a small-sample artefact.
+
+The point is not that some other constant would do better. Corollary 3 fixes the
+zero-threshold rate at exactly $(g-1)/g$, and subtracting any constant $c$ from an
+$O_p(1)$ statistic leaves a false-alarm probability $\Pr(W > c)$ that is positive
+and does not shrink with $L$. A constant *can* pin a chosen asymptotic level —
+that is Corollary 2 — but it has to be read off the statistic's own distribution,
+and $\log(g-1)$ is a codelength read off the model instead.
 
 **A remark on mixing rather than maximising.** Writing $K = g-1$ and $a_r$ for
 the profiled gain at shift $r$, the implemented two-part statistic is
@@ -1494,7 +1582,7 @@ version of the present comparison (Extension 14.4) that would not rely on a know
 boundary or on two-part boundary coding at all.
 
 Relating the two would first require replacing Model C's maximum over shifts with
-the appropriate group average, which is a different statistic and not obviously a
+the group average of Wijsman's representation [23], which is a different statistic and not obviously a
 better one: Section 9.1's mixture remark shows the normalised average fires *more*
 often at collapse than the penalised maximum, and profiling $\eta$ out before
 averaging does not produce a marginal code in any case. The correspondence is
@@ -1526,15 +1614,17 @@ boundary these produce different leading MDL structures — $\tfrac{g-1}{2}\log 
 $\tfrac{d_{\mathrm{fund}}}{2}\log L$, and a constant.
 
 The constant is the interesting case, and it is not the degenerate one it first
-appears. Orbit collapse joins $g-1$ regular branches at a point rather than
-creating a singularity, so the zero increment holds there too; what changes is
-that the profiled gain acquires a nondegenerate $O_p(1)$ law, a maximum over the
-nonidentity shifts of differences of Gaussian projection energies. That law is
-derived, validated against the detector, and does two things at once. It yields
-asymptotic critical values, making the shared-orbit statistic operational. And it
-shows that the two-part constant $\log(g-1)$ cannot control the raw rule — a
-codelength is not a critical value, and at collapse the gap between them is
-several nats.
+appears. Orbit collapse is a benign finite-branch singularity: the label is
+nonidentifiable where the $g-1$ branches meet, so the union is singular, but each
+branch is regular and the real log canonical threshold is unchanged, so the zero
+increment holds there too. What changes is that the profiled gain acquires a
+nondegenerate $O_p(1)$ law, a maximum over the nonidentity shifts of differences
+of Gaussian projection energies. That law is derived, proved, and validated
+against the detector, and it does two things at once. It yields asymptotic
+critical values, making the shared-orbit statistic operational. And it shows that
+the two-part constant $\log(g-1)$ cannot control the raw rule: the zero-threshold
+rate is exactly $(g-1)/g$, and the level-$0.05$ threshold sits $1.0$ to $1.8$
+nats above the codelength. A codelength is not a critical value.
 
 The simulation supports this rather than carrying it. Under matched geometry the
 constrained detectors need materially less data, and under higher-mode
@@ -1603,14 +1693,14 @@ exactly where this paper assumes it.
 16. Wang, G., Zou, C., and Yin, G. (2018). Change-point detection in multinomial data with a large number of categories. *The Annals of Statistics*, 46(5), 2020–2044.
 17. Truong, C., and Runge, V. (2024). An efficient algorithm for exact segmentation of large compositional and categorical time series. *Stat*, 13(4), e70012.
 18. Pérez-Ortiz, M. F., Lardy, T., de Heide, R., and Grünwald, P. D. (2024). E-statistics, group invariance and anytime-valid testing. *The Annals of Statistics*, 52(4), 1410–1432.
-19. Yu, L., Zhao, R., Huang, J., Zhu, L., and Zhu, X. (2026). A sparse dimension-reduced subspace-based approach for detecting multiple change points in high-dimensional data. *Journal of Multivariate Analysis*, 213.
+19. Yu, L., Zhao, R., Huang, J., Zhu, L., and Zhu, X. (2026). A sparse dimension-reduced subspace-based approach for detecting multiple change points in high-dimensional data. *Journal of Multivariate Analysis*, 213, 105594.
 20. Csiszár, I., and Shields, P. C. (2004). Information theory and statistics: a tutorial. *Foundations and Trends in Communications and Information Theory*, 1(4), 417–528.
 21. Rho, M., Tang, H., and Ye, Y. (2010). FragGeneScan: predicting genes in short and error-prone reads. *Nucleic Acids Research*, 38(20), e191.
 22. Cancrini, N., Martinelli, F., Roberto, C., and Toninelli, C. (2008). Kinetically constrained spin models. *Probability Theory and Related Fields*, 140, 459–504.
+23. Wijsman, R. A. (1967). Cross-sections of orbits and their application to densities of maximal invariants. *Proceedings of the Fifth Berkeley Symposium on Mathematical Statistics and Probability*, 1, 389–400.
 
 > **Note on references.** Authors, titles and venues have been checked against
-> the published record. Entry 19 is in press — volume assigned, pagination not
-> yet fixed.
+> the published record.
 
 ---
 
