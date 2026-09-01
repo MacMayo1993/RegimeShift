@@ -22,9 +22,10 @@ unchanged and the zero increment survives; what collapse alters is the bounded
 term and the limiting law. We derive that law — a maximum over the nonidentity
 shifts of differences of Gaussian projection energies — prove it, and validate it
 against the detector. Two consequences follow. It supplies asymptotic critical
-values, making the statistic operational. And it shows that the two-part
-$\log(g-1)$ leaves a false-alarm probability that does not vanish: exactly
-$(g-1)/g$ at a zero threshold, and 0.14 to 0.50 at the label cost itself.
+values, making the statistic operational. And it shows that no
+two-part label constant controls the raw rule: the unpenalised gain exceeds zero
+with probability exactly $(g-1)/g$, and subtracting $\log(g-1)$ still leaves an
+asymptotic firing rate of 0.14 to 0.50.
 
 A 468,000-dataset study over $C_2$ through $C_6$ accompanies this. Calibrated at
 a common 5%, the shared-orbit detector needs roughly 31–39% fewer observations
@@ -576,35 +577,50 @@ $I(0) = I_{d_{\mathrm{fund}}}$.
 >
 > $$ W_{g,\rho}(h) \;=\; \max_{r \neq e}\Big[ \tfrac12\big\|\sqrt{\rho}\,U_1 + \sqrt{1-\rho}\,R^{-r}U_2 - (1-\rho)R^{-r}w_r\big\|^2 \;-\; \tfrac12\big\|\sqrt{\rho}\,U_1 + \sqrt{1-\rho}\,U_2\big\|^2 \;+\; \sqrt{1-\rho}\,U_2^{\top}w_r \;-\; \tfrac{1-\rho}{2}\|w_r\|^2 \Big]. $$
 
-*Proof.* Write $w_r = R^r h - h$ and reparameterise the shared state as
-$\eta_1 = (h+t)/\sqrt{L}$, so that under shift $r$ the two segments sit at local
-displacements $t/\sqrt{L}$ and $(w_r + R^r t)/\sqrt{L}$ from the truth.
+*Proof.* Write $\rho_L = L_1/L \to \rho$, $\rho_{1,L} = \rho_L$,
+$\rho_{2,L} = 1-\rho_L$, and $w_r = R^r h - h$. Let $S_{i,L}$ be segment $i$'s
+score at $\eta_L$ and $U_{i,L} = S_{i,L}/\sqrt{L_i}$ its normalisation; the two
+segments are independent, $\eta_L \to 0$, and $I$ is continuous with
+$I(0) = I_{d_{\mathrm{fund}}}$, so the joint central limit theorem gives
+$$ (U_{1,L}, U_{2,L}) \;\Longrightarrow\; (U_1, U_2) \sim N\big(0, I_{2d_{\mathrm{fund}}}\big), \qquad I(\eta_L) \to I_{d_{\mathrm{fund}}}. $$
+Reparameterise the shared state as $\eta_1 = (h+t)/\sqrt{L}$, so that under shift
+$r$ the two segments sit at local displacements $t/\sqrt{L}$ and
+$(w_r + R^r t)/\sqrt{L}$ from the truth.
 
-By local asymptotic normality, for each segment and uniformly on compact sets of
-$t$,
-$$ \ell_i\big(\eta_L + \Delta_i/\sqrt{L}\big) - \ell_i(\eta_L) \;=\; \sqrt{\rho_i}\,U_i^{\top}\Delta_i \;-\; \tfrac{\rho_i}{2}\,\Delta_i^{\top}I(\eta_L)\,\Delta_i \;+\; o_P(1), $$
-with $\rho_1 = \rho$, $\rho_2 = 1-\rho$, and $U_i = S_i/\sqrt{L_i}$ the normalised
-score. The two segments are independent, $\eta_L \to 0$, and $I$ is continuous
-with $I(0) = I$, so the joint central limit theorem gives
-$(U_1, U_2) \Rightarrow N(0, I_{2d_{\mathrm{fund}}})$ and $I(\eta_L) \to I$.
+**Localisation.** Each branch objective $\ell_1(\eta) + \ell_2(R^r\eta)$ is
+strictly concave in $\eta$: the chart of Section 5.3 makes each term a regular
+exponential-family log-likelihood in the logits, $B$ and $R^r$ are linear, and
+the information is positive definite near the origin. Its population maximiser
+is the truth and is consistent, so the exact profiled maximiser satisfies
+$\sqrt{L}\,\hat\eta_{r,L} = O_P(1)$ for each $r$, and uniformly over the fixed
+finite set of shifts. With probability tending to one the profiling may therefore
+be restricted to a compact neighbourhood of the origin in $t$, on which the LAN
+remainder below is uniform — which is what licenses substituting the quadratic
+expansion into the profiling steps rather than merely maximising the expansion.
 
-Under the null ($r = e$, $w_e = 0$) both displacements equal $t$, the quadratic
-coefficients combine as $\rho/2 + (1-\rho)/2 = 1/2$, and the profiled objective is
-$$ \big(\sqrt{\rho}\,U_1 + \sqrt{1-\rho}\,U_2\big)^{\top}t \;-\; \tfrac12\|t\|^2 \;+\; o_P(1), $$
-whose maximiser is $O_P(1)$ — so the expansion applies where it is used — and
-whose maximum is $\tfrac12\|\sqrt{\rho}U_1 + \sqrt{1-\rho}U_2\|^2 + o_P(1)$.
+**Expansion.** By local asymptotic normality, for each segment and uniformly on
+compact sets of $\Delta_i$,
+$$ \ell_i\big(\eta_L + \Delta_i/\sqrt{L}\big) - \ell_i(\eta_L) \;=\; \sqrt{\rho_{i,L}}\,U_{i,L}^{\top}\Delta_i \;-\; \tfrac{\rho_{i,L}}{2}\,\Delta_i^{\top}I(\eta_L)\,\Delta_i \;+\; o_P(1). $$
 
-Under a fixed $r \neq e$, substituting $\Delta_2 = w_r + R^r t$ and using
-$w_r^{\top}R^r t = (R^{-r}w_r)^{\top}t$ gives
-$$ \big(\sqrt{\rho}\,U_1 + \sqrt{1-\rho}\,R^{-r}U_2 - (1-\rho)R^{-r}w_r\big)^{\top} t \;-\; \tfrac12\|t\|^2 \;+\; \sqrt{1-\rho}\,U_2^{\top}w_r \;-\; \tfrac{1-\rho}{2}\|w_r\|^2 \;+\; o_P(1), $$
+**Null branch.** At $r = e$ both displacements equal $t$; the quadratic
+coefficients combine as $\rho_L/2 + (1-\rho_L)/2 = 1/2$, and the objective is
+$$ \big(\sqrt{\rho_L}\,U_{1,L} + \sqrt{1-\rho_L}\,U_{2,L}\big)^{\top}t \;-\; \tfrac12\|t\|^2 \;+\; o_P(1), $$
+whose maximum over the localised region is
+$\tfrac12\big\|\sqrt{\rho_L}U_{1,L} + \sqrt{1-\rho_L}U_{2,L}\big\|^2 + o_P(1)$.
+
+**Shifted branches.** For fixed $r \neq e$, substituting $\Delta_2 = w_r + R^r t$
+and using $w_r^{\top}R^r t = (R^{-r}w_r)^{\top}t$ gives
+$$ \big(\sqrt{\rho_L}\,U_{1,L} + \sqrt{1-\rho_L}\,R^{-r}U_{2,L} - (1-\rho_L)R^{-r}w_r\big)^{\top} t \;-\; \tfrac12\|t\|^2 \;+\; \sqrt{1-\rho_L}\,U_{2,L}^{\top}w_r \;-\; \tfrac{1-\rho_L}{2}\|w_r\|^2 \;+\; o_P(1), $$
 with maximum
-$\tfrac12\|\sqrt{\rho}U_1 + \sqrt{1-\rho}R^{-r}U_2 - (1-\rho)R^{-r}w_r\|^2
-+ \sqrt{1-\rho}U_2^{\top}w_r - \tfrac{1-\rho}{2}\|w_r\|^2 + o_P(1)$.
+$\tfrac12\big\|\sqrt{\rho_L}U_{1,L} + \sqrt{1-\rho_L}R^{-r}U_{2,L} - (1-\rho_L)R^{-r}w_r\big\|^2
++ \sqrt{1-\rho_L}\,U_{2,L}^{\top}w_r - \tfrac{1-\rho_L}{2}\|w_r\|^2 + o_P(1)$.
 
-The detector's raw gain is the maximum over the $g-1$ nonidentity shifts of the
-second display minus the first. The index set is finite and the maximum is a
-continuous function of $(U_1, U_2)$, so the continuous mapping theorem delivers
-the stated limit. $\square$
+**Conclusion.** The detector's raw gain is the maximum over the $g-1$ nonidentity
+shifts of the second display minus the first. That maximum is a continuous
+function of $(U_{1,L}, U_{2,L})$ and of $\rho_L$, the index set is finite, and
+$\rho_L \to \rho$, so the continuous mapping theorem applied to
+$(U_{1,L}, U_{2,L}) \Rightarrow (U_1, U_2)$ delivers the stated limit.
+$\square$
 
 > **Corollary 1 (exact collapse).** At $h = 0$ every $w_r$ vanishes and the limit
 > is a difference of Gaussian projection energies,
@@ -966,9 +982,10 @@ threshold sits between $1.00$ and $1.77$ nats above $\log(g-1)$. The gap is
 asymptotic, not a small-sample artefact.
 
 The point is not that some other constant would do better. Corollary 3 fixes the
-zero-threshold rate at exactly $(g-1)/g$, and subtracting any constant $c$ from an
-$O_p(1)$ statistic leaves a false-alarm probability $\Pr(W > c)$ that is positive
-and does not shrink with $L$. A constant *can* pin a chosen asymptotic level —
+*unpenalised* gain's zero-threshold rate at exactly $(g-1)/g$, and subtracting any
+constant $c$ from an $O_p(1)$ statistic leaves a false-alarm probability
+$\Pr(W > c)$ that is positive and does not shrink with $L$ — the column above is
+that probability at $c = \log(g-1)$ and at $c = \log g$. A constant *can* pin a chosen asymptotic level —
 that is Corollary 2 — but it has to be read off the statistic's own distribution,
 and $\log(g-1)$ is a codelength read off the model instead.
 
@@ -1489,7 +1506,10 @@ has not been performed.**
    identity, so it is not a proper extension of its own null, and $\log(g-1)$ is
    one defensible convention among several. Section 9.1 measures what the
    alternatives do; only a complete cross-model code would settle the constant
-   rather than choosing it, and no constant of any kind is a testing threshold.
+   rather than choosing it. Separately, a structural codelength constant is not
+   thereby a testing threshold: a level-$\alpha$ threshold *can* be constant for
+   fixed $g$ and $\rho$ — Corollary 2 supplies one — but it has to be derived
+   from the statistic's null distribution rather than from the label code.
 7. **Calibrated power is invariant to the penalties.** The comparison of Section
    9.2 is a comparison of likelihood statistics. It supports no claim that the
    complexity increments cause the sample-size reduction, and the design cannot
@@ -1622,9 +1642,11 @@ nondegenerate $O_p(1)$ law, a maximum over the nonidentity shifts of differences
 of Gaussian projection energies. That law is derived, proved, and validated
 against the detector, and it does two things at once. It yields asymptotic
 critical values, making the shared-orbit statistic operational. And it shows that
-the two-part constant $\log(g-1)$ cannot control the raw rule: the zero-threshold
-rate is exactly $(g-1)/g$, and the level-$0.05$ threshold sits $1.0$ to $1.8$
-nats above the codelength. A codelength is not a critical value.
+the two-part constant $\log(g-1)$ cannot control the raw rule. The unpenalised
+gain's zero-threshold rate is exactly $(g-1)/g$; after subtracting the proposed
+label cost the asymptotic firing rate is still $0.14$ to $0.50$ over
+$g = 2,\dots,6$, and the level-$0.05$ threshold sits $1.0$ to $1.8$ nats above
+the codelength. A codelength is not a critical value.
 
 The simulation supports this rather than carrying it. Under matched geometry the
 constrained detectors need materially less data, and under higher-mode
@@ -1806,8 +1828,8 @@ that the largest are real. To call this small drift would understate it. The
 decomposition below is what makes the significance informative rather than
 alarming — these residuals are the maximised-likelihood gain's finite-sample
 behaviour and nothing else — but a reproducible eight-sigma departure is a
-quantified target for the singular analysis of Section 14.5, not noise to be set
-aside. The evidence supports the qualified statement:
+quantified finite-sample deviation from the leading-order law, not noise to be
+set aside. The evidence supports the qualified statement:
 
 > The shared exact-orbit detector has a near-zero leading logarithmic coefficient
 > relative to the regular split models, while finite-sample score behaviour
