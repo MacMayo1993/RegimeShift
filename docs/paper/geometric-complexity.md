@@ -7,50 +7,31 @@ author: Mac Mayo
 # Abstract
 
 A categorical regime change can be modelled at several levels of structural
-constraint. An unrestricted detector allows each segment to occupy the full
-parameter space. A representation-constrained detector restricts each segment
-independently to a selected invariant subspace. A shared-orbit detector imposes
-the stronger requirement that both segment distributions arise from one
-continuous state and differ only by a finite group action. These are different
-statistical hypotheses with different minimum-description-length (MDL)
-complexity increments.
+constraint: each segment free in the full parameter space, each confined
+independently to an invariant subspace, or both required to arise from one
+continuous state differing by a finite group action. At a known boundary these
+cost $\tfrac{g-1}{2}\log L$, $\tfrac{d_{\mathrm{fund}}}{2}\log L$ and — because
+the shared-orbit alternative introduces no continuous parameter — only $O(1)$.
 
-For a known boundary and a regular full model of dimension $d$, independently
-fitting both segments introduces the leading penalty $\tfrac{d}{2}\log L$.
-Restricting both segments independently to a $d_{\mathrm{fund}}$-dimensional
-fundamental representation gives $\tfrac{d_{\mathrm{fund}}}{2}\log L$. If the
-segments share the same continuous orbit parameter and differ only by a relative
-element of a fixed cyclic group $C_g$, the continuous-dimension increment is
-zero; a two-part code pays only the discrete relative-label cost $\log(g-1)$,
-subject to finite-sample and singular corrections near orbit-collapse points.
+That $O(1)$ regime is the substance of the paper. Orbit collapse turns out not to
+be a singularity: the alternative is a finite union of regular branches, so the
+real log canonical threshold is unchanged and the zero increment survives. What
+changes is that the profiled gain acquires a nondegenerate $O_p(1)$ limit, a
+maximum over the nonidentity shifts of differences of Gaussian projection
+energies. We derive that law, validate it against the detector, and draw two
+consequences: it supplies asymptotic critical values, making the statistic
+operational; and it shows that no constant label cost controls the raw decision
+rule, the two-part $\log(g-1)$ leaving a firing rate of 0.14 to 0.50 at collapse.
+The naive MDL threshold is not a usable decision rule here.
 
-We derive these laws, construct a Fisher-orthonormal Fourier family for direct
-cyclic categorical models, implement the detectors, and evaluate them in a
-468,000-dataset Monte Carlo study over $C_2$ through $C_6$. Empirical full-model
-penalty slopes were 1.488, 1.967 and 2.488 for $g=4,5,6$ against predictions
-1.5, 2.0 and 2.5. Fundamental-subspace slopes were 0.522 for $g=2$ and
-0.964–1.036 for $g=3$ through $g=6$, against predictions 0.5 and 1.0.
-Shared-orbit residual slopes ranged from $-0.228$ to $0.139$ against a
-structural prediction of zero, several of them significantly so by their own
-standard errors. Under a common 5% null calibration the shared-orbit detector
-required approximately 31%, 37% and 39% fewer observations than the full
-detector on exact-orbit data for $g=4,5,6$. Under higher-mode misspecification
-the full detector retained high power while the constrained detectors did not.
-
-An **approximate-orbit** model interpolates between the subspace and
-shared-orbit hypotheses with a shrinkage code on the deviation, quantifying how
-far from exact symmetry a change can drift before the relational code stops
-paying; its deviation penalty uses the *profiled* information
-$L_1L_2/(L_1{+}L_2)$ remaining after the shared state is estimated. A
-**model-selection** procedure chooses the geometry from data rather than
-assuming it, comparing total code lengths against a common reference under a
-stated BIC/Laplace convention. A **block family** separates group order from
-alphabet size, removing a confound present in the direct model.
-
-Throughout, the reported penalty coefficients should be read as finite-sample
-compatibility checks on a prescribed complexity law, not as an independent
-empirical determination of it, and the zero-increment result for the shared-orbit
-model is stated for regular orbit strata.
+A 468,000-dataset study over $C_2$ through $C_6$ accompanies this. Calibrated at
+a common 5%, the shared-orbit detector needs roughly 31–39% fewer observations
+than the unrestricted one on exact-orbit data for $g = 4,5,6$, and loses that
+entirely under higher-mode misspecification; since a per-configuration penalty
+cancels exactly from a calibrated comparison, these figures measure the targeting
+of the likelihood statistics rather than the effect of the codes. Three quantities
+measured in nats are kept distinct throughout: the code constant, the testing
+threshold, and the calibrated operating point.
 
 **Keywords:** minimum description length; cyclic groups; changepoint models;
 representation theory; information geometry; categorical data; model selection;
@@ -96,7 +77,8 @@ The distinction is not semantic. It determines the leading MDL penalty and the
 sample length required for reliable detection. The contributions of this paper
 are:
 
-1. the known-boundary MDL penalties for the four model classes;
+1. the known-boundary MDL penalties for the four model classes, and the limit
+   law governing the shared-orbit statistic where that penalty is $O(1)$;
 2. a Fisher-orthonormal Fourier parameterisation for direct cyclic categorical
    families, and its block generalisation in which the group acts on phases
    while each phase carries its own alphabet;
@@ -105,7 +87,9 @@ are:
 4. a large Monte Carlo comparison testing both asymptotic score behaviour and
    calibrated practical power;
 5. a model-selection procedure that identifies the geometry from data rather
-   than assuming it.
+   than assuming it;
+6. a negative result: the two-part label constant does not control the raw
+   decision rule near orbit collapse, and no constant can.
 
 The analysis is explicitly an offline **known-boundary** model comparison. It is
 not a changepoint-discovery algorithm. Unknown-boundary scanning and online
@@ -150,11 +134,15 @@ for testing between two group models, the likelihood ratio of the maximal
 invariant is growth-rate optimal, and that an anytime-valid test can be built on
 it. That is a different question from ours — theirs is a sequential testing
 problem with no coding component, ours a fixed-boundary description-length
-comparison across a hierarchy of alternatives — but the objects overlap: the
-maximal invariant of $C_g$ acting on the fundamental subspace is exactly what
-Model C conditions on. Their framework is the most promising route to a
-sequential version of this comparison, one that would not depend on a known
-boundary or on two-part boundary coding; Section 14.9 develops the point.
+comparison across a hierarchy of alternatives — but the group being quotiented is
+the same one. We do **not** claim Model C's statistic is the maximal-invariant
+likelihood ratio: by Wijsman's representation that ratio *averages* the densities
+over the group, whereas Model C aligns and profiles, then *maximises* over the
+nonidentity elements. Those are different statistics, and establishing a
+correspondence would take an argument this paper does not give. Their framework
+remains the most promising route to a sequential version of this comparison, one
+that would not depend on a known boundary or on two-part boundary coding;
+Section 14.7 develops the point.
 
 ---
 
@@ -173,8 +161,21 @@ two-regime alternative. The detector score is
 $$ T_M \;=\; \big[\hat\ell_1^M - \hat\ell_0^M\big] \;-\; \mathrm{pen}_M , $$
 
 where $\hat\ell$ are maximised log-likelihoods in nats. The raw MDL rule declares
-a change when $T_M > 0$. Section 9.6 shows why that rule is not comparable
-across models and why all reported power is calibrated instead.
+a change when $T_M > 0$.
+
+**Three objects, kept apart.** Much of what follows depends on not conflating
+them, and they are easy to conflate because all three are measured in nats.
+
+1. The **structural code constant** $\mathrm{pen}_M$ — a codelength, fixed by a
+   coding convention, and the thing the complexity laws of Section 4 are about.
+2. A **testing threshold** — a critical value, fixed by choosing an error rate
+   $\alpha$, and derivable for Model C from the limit law of Section 6.4.
+3. **Calibrated power** — a comparison at a common nominal false-positive rate,
+   which Section 8.3 shows is invariant to (1) and therefore reports on the
+   likelihood statistics rather than on the codes.
+
+Section 9.1 shows that (1) does not serve as (2), which is the paper's negative
+result; Section 9.2 reports (3) and says what it does and does not license.
 
 ## 2.2 Full parameter family
 
@@ -270,15 +271,24 @@ label is fixed as a gauge.
 > $$ \Delta d_C = 0, $$
 > and its total incremental cost over the null is $\log(g-1)$ nats, constant in
 > $L$.
+>
+> Assumption 4 fixes the constant but is not forced by the rest. Model C's
+> alternative excludes the identity, so it is not a proper extension of its own
+> null, and the cost depends on whether the code is taken conditional on a
+> change, includes the identity ($\log g$), carries a model-selection cost, or
+> mixes over $r$ rather than maximising. **The robust content of the proposition
+> is $\mathrm{pen}_C = O(1)$ with no continuous $\log L$ increment**; the exact
+> constant is a convention, and Section 9.1 measures what turns on the choice.
 
 Assumption 2 is the one that bites. At $\eta = 0$ the orbit collapses to a point,
 every $R^s$ acts trivially, and the parameter is a fixed point of the whole group;
 more generally at any $\eta$ with a nontrivial stabiliser the shift is not
-identifiable. At such points ordinary BIC dimension counting is not the correct
-marginal-likelihood theory at all, and the singular framework of Watanabe [7,8]
-and Drton–Plummer [9] applies instead. Section 6.3 develops this, and Section 9.6
-shows what it does to the null in practice. At $g=2$ there is a single
-nonidentity shift and the label cost is $\log 1 = 0$.
+identifiable. Section 6.3 shows that this is *not* a singularity in the sense of
+Watanabe [7,8] and Drton–Plummer [9] — the alternative is a finite union of
+regular branches, and the zero increment survives — but the label does become
+uninformative there, and Section 6.4 derives the nondegenerate $O_p(1)$ law that
+results. Section 9.1 shows what that does to the raw rule in practice. At $g=2$
+there is a single nonidentity shift and the label cost is $\log 1 = 0$.
 
 ## 3.4 Model D: approximate orbit
 
@@ -388,7 +398,7 @@ $$ \mathrm{pen}_{\mathrm{split}} \;=\; \frac{d}{2}\log L \;+\; \frac{d}{2}\log\b
 Thus the coefficient of $\log L$ is $d/2$, while the split fraction affects only
 the bounded term. The expression is *algebraically* exact within the BIC/Laplace
 approximation; it is not an exact universal codelength, and the name is chosen to
-say so. Section 9.7 examines the prediction empirically.
+say so. Appendix B.4 examines the prediction empirically.
 
 ## 4.3 Unknown boundaries
 
@@ -405,24 +415,17 @@ Writing
 
 $$ K^\ast \;=\; \frac{1}{2\ln 2} \;=\; 0.7213475\ldots $$
 
-for the per-dimension penalty rate in bits per e-fold, **on regular strata and
-under the BIC/Laplace coding convention of Section 10, every leading coefficient
-in this framework is an integer multiple of $K^\ast$**: Model A pays
-$(g-1)K^\ast$, Model B pays $d_{\mathrm{fund}}K^\ast$, and Model C pays zero. The
-hierarchy is a counting statement — how many $K^\ast$ a model spends to cross the
-boundary.
+for the per-dimension rate in bits per e-fold, the leading coefficients are
+$(g-1)K^\ast$ for Model A, $d_{\mathrm{fund}}K^\ast$ for Model B and zero for
+Model C.
 
-$K^\ast$ is *definitional*, not empirical: it is Schwarz's one-half expressed in
-base 2, and any quantity counting half a parameter per e-fold in bits produces
-it. Appendix C returns to this.
-
-The integer-multiple statement is likewise conditional, and the qualification is
-not cosmetic. It holds because regular BIC counts an integer number of parameters
-and charges each one half a $\log L$. Under singular learning theory the leading
-coefficient is a real log canonical threshold, which need not be a half-integer
-and so need not be an integer multiple of $K^\ast$ at all — and orbit collapse
-(Proposition 1, assumption 2) is exactly a singularity of this kind. The counting
-picture describes the regular part of this problem, not all of it.
+This is a **units conversion and nothing more**. $K^\ast$ is Schwarz's one-half
+expressed in base 2, so any quantity that counts half a parameter per e-fold and
+reports in bits produces it, and the observation that the coefficients are whole
+multiples of it says only that regular BIC counts a whole number of parameters.
+The paper draws no conclusion from it. Appendix C records a numerical
+coincidence involving the same constant and explains why that coincidence should
+not be leaned on either.
 
 ---
 
@@ -500,14 +503,133 @@ $\epsilon^2 \sim \tfrac{\log(g-1)}{L}$. The stronger $L^{-1}$ scaling of Model C
 arises not merely from a smaller tangent space, but from *sharing the continuous
 state across the boundary*.
 
-## 6.3 Singular qualification
+## 6.3 Orbit collapse is a finite union, not a singularity
 
-At $\eta = 0$ all orbit elements coincide, the relative label is unidentifiable,
-and the shared-orbit model is singular. The two-part code still adds no
-independent continuous parameter vector, but exact Bayesian asymptotics near
-orbit collapse may contain nonregular corrections. The empirical study therefore
-treats a zero leading coefficient as a **structural prediction**, while allowing
-finite-sample residual length dependence.
+At $\eta = 0$ all orbit elements coincide and the relative label is
+unidentifiable. It is tempting to read that as putting Model C outside regular
+asymptotics altogether, but the geometry says otherwise, and getting this right
+is what makes the next subsection possible.
+
+For each *fixed* nonidentity $r$, the map
+$\eta \mapsto \big(p(\eta),\, p(R^r\eta)\big)$ is a smooth
+$d_{\mathrm{fund}}$-dimensional family with positive-definite quadratic
+Kullback–Leibler expansion at the origin. Nothing about it degenerates. Model C's
+parameter space is the *union* of the $g-1$ such branches, all passing through
+the same point $(u,u)$, and the null is a further $d_{\mathrm{fund}}$-dimensional
+manifold through it. A finite union of regular branches has the regular leading
+exponent: the marginal likelihood is a finite sum of Laplace integrals, each of
+order $L^{-d_{\mathrm{fund}}/2}$, and the branch multiplicity moves into the
+bounded term. So the real log canonical threshold is
+$\lambda = d_{\mathrm{fund}}/2$ on both sides, giving
+
+$$ \Delta\lambda_C \;=\; 0 $$
+
+**at collapse as well as on a regular orbit.** Proposition 1's zero increment
+survives the point that appeared to threaten it, and no new $\log L$ coefficient
+appears anywhere.
+
+What *does* happen at collapse is that the profiled log-likelihood gain stops
+converging to zero and acquires a nondegenerate $O_p(1)$ law. That law is the
+subject of Section 6.4, and it is where the paper's negative result about MDL
+thresholding comes from.
+
+The only collapsed state in this family is the origin. A nonidentity element of
+$C_g$ acts on $V_{\mathrm{fund}}$ as a rotation by $2\pi r/g \neq 0$, so
+$R^r - I$ is invertible and fixes nothing but $0$; numerically
+$\min_{r\neq e}|\det(R^r - I)| \geq 0.586$ through $g = 8$. Statements about
+"states with nontrivial stabiliser" are therefore vacuous here, though they would
+not be for a nonfaithful higher mode or a richer group action.
+
+## 6.4 The collapse law
+
+Write $\rho = L_1/L$ and let the shared state sit at the local value
+$\eta_L = h/\sqrt{L}$, so that $h = 0$ is exact collapse and large $\|h\|$ is a
+regular orbit state. Let $U_1, U_2 \sim N(0, I_{d_{\mathrm{fund}}})$ be the two
+segments' normalised scores, and $w_r = R^r h - h$.
+
+> **Theorem 1 (local law for the shared-orbit statistic).** Under the null of no
+> change with shared state $\eta_L = h/\sqrt{L}$, the shared-orbit raw gain
+> converges in distribution to
+>
+> $$ W_{g,\rho}(h) \;=\; \max_{r \neq e}\Big[ \tfrac12\big\|\sqrt{\rho}\,U_1 + \sqrt{1-\rho}\,R^{-r}U_2 - (1-\rho)R^{-r}w_r\big\|^2 \;-\; \tfrac12\big\|\sqrt{\rho}\,U_1 + \sqrt{1-\rho}\,U_2\big\|^2 \;+\; \sqrt{1-\rho}\,U_2^{\top}w_r \;-\; \tfrac{1-\rho}{2}\|w_r\|^2 \Big]. $$
+
+> **Corollary 1 (exact collapse).** At $h = 0$ every $w_r$ vanishes and the limit
+> is a difference of Gaussian projection energies,
+> $$ W_{g,\rho}(0) \;=\; \tfrac12\max_{r\neq e}\Big[\big\|\sqrt{\rho}U_1 + \sqrt{1-\rho}R^{-r}U_2\big\|^2 - \big\|\sqrt{\rho}U_1 + \sqrt{1-\rho}U_2\big\|^2\Big], $$
+> the maximum over the nonidentity shifts of the gain from aligning rather than
+> pooling. It does not depend on $L$: the statistic is $O_p(1)$ at collapse, and
+> the zero-threshold false-positive rate therefore does **not** vanish as data
+> accumulates.
+
+**A readable form on a balanced split.** Take $L_1 = L_2 = n$ and the
+*per-segment* convention $\eta_n = h_n/\sqrt{n}$. With $Z_1, Z_2$ iid
+$N(0, I_{d_{\mathrm{fund}}})$ put $Y_i = h_n + Z_i$ — signal plus noise in each
+segment. Then
+
+$$ W_g(h_n) \;=\; \tfrac14 \max_{r \neq e}\Big[\;\big\|Y_1 + R^{-r}Y_2\big\|^2 \;-\; \big\|Y_1 + Y_2\big\|^2\;\Big]: $$
+
+aligned against unaligned, and nothing else. This is Theorem 1 at $\rho = 1/2$
+and $h = \sqrt2\,h_n$; the two expressions differ by
+$h^{\top}R^{-r}h - h^{\top}R^{r}h$, which vanishes for a rotation, and agree to
+machine precision under common random numbers. The convention matters and is
+easy to get wrong: the naive extension of the $Y$ form to unbalanced splits,
+weighting $Y_i$ by $\sqrt{\rho_i}$, reproduces Corollary 1 exactly and is wrong
+everywhere off collapse.
+
+> **Corollary 2 (critical values).** For each $g$, $\rho$ and $\alpha$ the
+> $1-\alpha$ quantile of $W_{g,\rho}(0)$ is a pointwise asymptotic level-$\alpha$
+> critical value for the raw shared-orbit gain at collapse.
+
+**Table 2.** Quantiles of $W_{g,1/2}(0)$, from 400,000 draws at the base seed
+(`regimeshift/collapse.py`).
+
+| $g$ | mean | $q_{0.95}$ | $q_{0.99}$ | $\Pr(W > 0)$ |
+|---:|---:|---:|---:|---:|
+| 2 | $-0.002$ | 1.596 | 2.980 | 0.500 |
+| 3 | 0.434 | 2.463 | 3.889 | 0.667 |
+| 4 | 0.604 | 2.520 | 4.049 | 0.751 |
+| 5 | 0.679 | 2.584 | 4.155 | 0.800 |
+| 6 | 0.716 | 2.610 | 4.189 | 0.834 |
+
+These are **critical values, not codelength constants**. They are defined by a
+chosen error rate and move with $\alpha$ — $q_{0.99}$ is more than a nat above
+$q_{0.95}$ at every $g$ — so they answer "what threshold makes the raw rule an
+asymptotically valid test near collapse", not "what should the relative shift
+cost to encode". Section 10 keeps the two apart deliberately.
+
+**Is collapse the least favourable local null?** Corollary 2 is pointwise; using
+$q_{1-\alpha}(W_{g,\rho}(0))$ as an operating threshold would need
+$\sup_h q_{1-\alpha}(W_{g,\rho}(h)) = q_{1-\alpha}(W_{g,\rho}(0))$. Sweeping
+$\|h\| \in [0,6]$ and a full orbit sector at $\alpha = 0.05$, $\rho = 1/2$, with
+common random numbers across every $h$:
+
+| $g$ | $q_{0.95}$ at collapse | sweep maximum | excess | $\|h\|$ at maximum | independent re-check |
+|---:|---:|---:|---:|---:|---:|
+| 2 | 1.603 | 1.605 | 0.002 | 0.05 | $+0.021$ |
+| 3 | 2.461 | 2.464 | 0.003 | 0.15 | $+0.000$ |
+| 4 | 2.517 | 2.522 | 0.006 | 0.15 | $+0.001$ |
+| 5 | 2.585 | 2.586 | 0.001 | 0.10 | $+0.008$ |
+| 6 | 2.603 | 2.603 | 0.000 | 0.15 | $+0.009$ |
+
+No point in the sweep exceeds the collapse quantile by more than $0.01$ — the
+largest excess anywhere is $0.006$ — the argmax sits at or beside the origin, and
+re-evaluating the selected argmax against the origin on *independent* draws gives
+differences of at most $0.021$ in either direction, consistent with noise rather
+than with a real maximum away from collapse.
+Common random numbers are essential to seeing this: estimating a few hundred
+quantiles independently and taking the maximum manufactures an excess of about
+$0.02$ from Monte Carlo noise alone, the same size as the effect being looked
+for, and they still leave a residual selection bias that the independent
+re-check is there to expose.
+
+This is a **numerical finding over the evaluated local-null grid**, not uniform
+size control. Whether collapse is least favourable for every $h$, and for every
+$\rho$ and $\alpha$, is left as a conjecture; nothing in this paper turns on it
+beyond the scope of the grid tested.
+
+Theorem 1 is validated against the detector in `tests/test_collapse.py`, at
+$h = 0$ for $g = 2,\dots,6$, at $\|h\| = 1.5$ and $3.0$, and at
+$\rho = 0.25, 0.1$.
 
 ---
 
@@ -610,7 +732,7 @@ sample-length dependence in Model C's penalty. All pass.
 
 ## 8.1 Simulation grid
 
-**Table 2.** Production design.
+**Table 3.** Production design.
 
 | Component | Values |
 |---|---|
@@ -650,7 +772,7 @@ transform. Matches Model C and is contained in Models A and B.
 **Independent fundamental.** Both regimes lie in the fundamental family but are
 not related by a cyclic shift. For $g \geq 3$ the right coordinate has radius
 0.72 times the left and angle 0.713 radians; for $g = 2$ it is $-0.55$ times the
-left. Matches Model B, generally violates Model C. **Section 9.8 shows this
+left. Matches Model B, generally violates Model C. **Section 9.5 shows this
 parameterisation is defective and gives a variant with a different confound.**
 
 **Full-space higher-mode change.** A mode-2 Fourier component with amplitude 0.85
@@ -694,9 +816,27 @@ precision, both ordinary and variance-weighted fits are reported.
 
 **Calibrated power analysis.** At every configuration an additive critical value
 is set to the empirical 95th percentile of 1,000 null scores, and power is
-estimated from 500 alternative samples. These curves support fair practical
-comparisons at a common nominal false-positive target but do not expose the raw
-MDL penalty coefficient.
+estimated from 500 alternative samples.
+
+> **The penalty cancels from this analysis exactly.** $\mathrm{pen}_M$ is a
+> deterministic function of $(d, L_1, L_2, g)$ — constant across draws within a
+> configuration, and identical under the null and the alternative. So
+> $$ q_{1-\alpha}\big(T_M \mid H_0\big) \;=\; q_{1-\alpha}\big(\widehat{G}_M \mid H_0\big) - \mathrm{pen}_M, $$
+> and therefore
+> $$ T_M > q_{1-\alpha}(T_M \mid H_0) \iff \widehat{G}_M > q_{1-\alpha}(\widehat{G}_M \mid H_0). $$
+> Calibrated power is a functional of the maximised-likelihood gain alone. Every
+> figure in Section 9.2 is unchanged if the penalties are set to zero, and the
+> implementation confirms it: recomputing the grid's calibrated power from raw
+> gains reproduces it bit for bit.
+>
+> The consequence is a scope limit, not a defect. **The calibrated comparison
+> shows which likelihood statistic is better targeted at orbit-structured change;
+> it is not evidence that the MDL penalties cause the sample-size reduction, and
+> it cannot be.** A design that did test the penalties would have to use the raw
+> rule — which for Model C fails for the reason Section 9.1 gives.
+
+These curves support fair practical comparisons at a common nominal
+false-positive target, read in those terms.
 
 ---
 
@@ -705,88 +845,113 @@ MDL penalty coefficient.
 All numbers below come from the committed production run, whose manifest records
 the commit, environment, package versions and a SHA-256 per file.
 
-## 9.1 Full-model penalty
+The section is organised around the distinction Section 2.1 draws. Section 9.1
+concerns the **structural code constant** and finds it wanting. Section 9.2
+concerns **calibrated power**, which — as Section 8.3 shows — is a property of
+the likelihood statistics and carries no information about the penalties at all.
+The regressions that check the implemented penalty coefficients against their
+prescribed values are an implementation matter and sit in Appendix B.
 
-**Table 3.** Raw-score regression estimates for the full model.
+## 9.1 The two-part label constant does not control the raw rule
 
-| $g$ | $\hat\beta_{\mathrm{gain}}$ | slope (OLS) | slope (WLS) | predicted | $R^2$ |
+This is the paper's negative result, and it is the one place where the
+complexity law meets data with something at stake.
+
+Model C's penalty does not grow with $L$, and at $g = 2$ it is exactly zero, so
+its raw zero-threshold rule gains no protection as the sample grows. Theorem 1
+says why: at collapse the statistic converges to $W_{g,\rho}(0)$, an $O_p(1)$
+law with $\Pr(W > 0)$ between $0.50$ and $0.83$. No constant subtracted from an
+$O_p(1)$ statistic makes it a test at a nominal level unless the constant is
+chosen from that statistic's own distribution — and $\log(g-1)$ is not.
+
+Against the limit law, the two candidate structural constants fare like this:
+
+**Table 4.** Asymptotic firing rate at collapse against each candidate label
+cost, from 400,000 draws of $W_{g,1/2}(0)$, with the level-$0.05$ critical value
+of Table 2 for comparison.
+
+| $g$ | $\log(g-1)$ | $\Pr(W > \log(g-1))$ | $\log g$ | $\Pr(W > \log g)$ | $q_{0.95}$ |
 |---:|---:|---:|---:|---:|---:|
-| 4 | 0.995 | 1.488 | 1.504 | 1.500 | 0.99996 |
-| 5 | 0.983 | 1.967 | 1.994 | 2.000 | 0.99989 |
-| 6 | 0.996 | 2.488 | 2.518 | 2.500 | 0.99990 |
+| 2 | 0.000 | 0.500 | 0.693 | 0.156 | 1.596 |
+| 3 | 0.693 | 0.337 | 1.099 | 0.220 | 2.463 |
+| 4 | 1.099 | 0.234 | 1.386 | 0.171 | 2.520 |
+| 5 | 1.386 | 0.175 | 1.609 | 0.138 | 2.584 |
+| 6 | 1.609 | 0.141 | 1.792 | 0.117 | 2.610 |
 
-Gain coefficients are within 1.7% of one and the observed penalty slopes follow
-the predicted increase with group order, agreeing to within 0.033 at every $g$.
-Under variance weighting the agreement is within 0.018.
+Neither convention is close. Including the identity in the label code helps and
+does not rescue: it moves $g=2$ from $0.50$ to $0.16$ and $g=6$ from $0.14$ to
+$0.12$, still two to three times any nominal level, and the level-$0.05$
+threshold sits a nat or more above either. The gap is asymptotic, not a
+small-sample artefact.
 
-## 9.2 Fundamental-subspace penalty
+**A remark on mixing rather than maximising.** Writing $K = g-1$ and $a_r$ for
+the profiled gain at shift $r$, the implemented two-part statistic is
+$S_{\max} = \max_r a_r - \log K$ and the normalised mixture is
+$S_{\mathrm{mix}} = \log\big(K^{-1}\sum_r e^{a_r}\big)$. These satisfy
 
-**Table 4.** Raw-score regression estimates for the fundamental-subspace model.
+$$ \max_r a_r - \log K \;\leq\; S_{\mathrm{mix}} \;\leq\; \max_r a_r, $$
 
-| $g$ | $\hat\beta_{\mathrm{gain}}$ | slope (OLS) | slope (WLS) | predicted | $R^2$ |
-|---:|---:|---:|---:|---:|---:|
-| 2 | 1.000 | 0.522 | 0.474 | 0.500 | 0.99994 |
-| 3 | 0.994 | 0.996 | 0.979 | 1.000 | 0.99959 |
-| 4 | 0.999 | 0.971 | 0.961 | 1.000 | 0.99960 |
-| 5 | 0.981 | 0.964 | 0.988 | 1.000 | 0.99931 |
-| 6 | 1.010 | 1.036 | 1.017 | 1.000 | 0.99973 |
+so the mixture is never above the *unpenalised* maximum but is always at least
+the penalised one — which is why replacing the two-part code by a mixture fires
+*more* often at a zero threshold, not less, and does not help here. It is also
+not a marginal code: $\eta$ is still profiled rather than integrated, so
+averaging over $r$ alone produces neither a Bayesian marginal likelihood nor the
+group average a maximal-invariant statistic would require.
 
-The coefficients remain approximately constant from $g=3$ through $g=6$ even
-though the full-simplex dimension grows from two to five. Read this in the terms
-Section 8.3 sets: the penalty is *inserted* into the score, so the fitted slope
-is $\Delta d/2 - s$ and the regression measures the gain residual $s$. **What the
-constancy establishes is that $s$ stays small for the fundamental family as the
-full-simplex dimension grows** — the two families are prescribed different
-complexity laws, and the finite-sample corrections do not obscure either one over
-the tested range. It is a compatibility check on the implementation, not
-independent evidence that the laws differ; that would need a fully specified
-universal code, which Section 14.3 lists and this paper does not implement. For
-$g=2$ and $g=3$ the model spaces coincide, since $d_{\mathrm{fund}} = g-1$ there;
-the informative separation begins at $g=4$.
+The production grid shows the same thing at finite $L$, since its null states
+sit at local values $\sqrt{L}\,\eta$ of order 1 to 20 rather than at collapse
+exactly:
 
-## 9.3 Shared exact-orbit penalty
+| detector | mean | worst |
+|---|---:|---:|
+| full | 0.0053 | 0.063 |
+| fundamental | 0.0090 | 0.063 |
+| shared orbit | **0.0531** | **0.281** |
 
-**Table 5.** Residual raw-score log-length slopes for the shared-orbit model.
+The worst cases are at short segments and weak effects — the corner nearest
+collapse — and are *not* concentrated at $g = 2$. The worst single row is
+$g = 3$, `independent_fundamental`, effect $0.08$, $L = 200$, and $g = 2$ has the
+lowest mean of any group order:
 
-| $g$ | $\hat\beta_{\mathrm{gain}}$ | residual slope (OLS) | (WLS) | structural prediction |
-|---:|---:|---:|---:|---:|
-| 2 | 0.991 | $-0.228$ | $-0.074$ | 0 |
-| 3 | 1.001 | 0.041 | 0.090 | 0 |
-| 4 | 1.002 | 0.083 | 0.165 | 0 |
-| 5 | 1.006 | 0.139 | 0.142 | 0 |
-| 6 | 1.004 | 0.122 | 0.179 | 0 |
+**Table 5.** Zero-threshold null rate for the shared-orbit detector, by group
+order.
 
-These residuals are far below the fundamental and full coefficients but are not
-uniformly zero, and by the run's own standard errors several are not close to
-zero either. Under variance weighting, which Section 8.3 prefers on this design,
-the distances from the structural prediction are $1.6$, $1.4$, $3.7$, $4.4$ and
-$8.0$ standard errors for $g = 2$ through $6$ — $0.179 \pm 0.022$ at $g=6$. The
-ordinary fit ranks them differently ($2.7$ at $g=2$, $3.2$ at $g=6$) but agrees
-that the largest are real. To call this small drift would understate it. The
-decomposition below is what makes the significance informative rather than
-alarming — these residuals are the maximised-likelihood gain's finite-sample
-behaviour and nothing else — but a reproducible eight-sigma departure is a
-quantified target for the singular analysis of Section 14.5, not noise to be set
-aside. The evidence supports the qualified statement:
+| $g$ | mean | worst |
+|---:|---:|---:|
+| 2 | 0.0384 | 0.275 |
+| 3 | **0.0590** | **0.281** |
+| 4 | 0.0570 | 0.208 |
+| 5 | 0.0550 | 0.177 |
+| 6 | 0.0532 | 0.139 |
 
-> The shared exact-orbit detector has a near-zero leading logarithmic coefficient
-> relative to the regular split models, while finite-sample score behaviour
-> retains small group-dependent drift.
+Reading this off the limit law rather than off $g$ alone: $\Pr(W > \log(g-1))$
+*decreases* in $g$ because the label cost grows faster than the statistic does,
+which is exactly the ordering the grid shows once the local states are accounted
+for.
 
-**Where the residual comes from.** Because this implementation subtracts a
-penalty it computes *exactly*, the gain and penalty coefficients need not be
-estimated jointly. Writing the mean raw gain as $L G + a + s\log L$ and the exact
-penalty as $\tfrac{\Delta d}{2}\log L + c$, the fitted slope satisfies the
-algebraic identity
+Three conclusions follow, and they are different from each other.
 
-$$ \text{penalty slope} \;=\; \frac{\Delta d}{2} \;-\; s , $$
+*The raw MDL rule is not a usable test for Model C.* Every power comparison in
+this paper is therefore made at a common calibrated 5%, and any performance claim
+stated on raw scores would be reading threshold generosity as detection ability.
 
-verified to $10^{-8}$. For Model C, $\Delta d = 0$, so **the residual slopes of
-Table 5 are $-s$ and nothing else** — a property of the maximised likelihood gain
-(shift maximisation and finite-sample MLE bias), not evidence of a hidden
-continuous-dimension penalty.
+*The structural constant is a coding convention, not a testing threshold.*
+$\log(g-1)$ remains a defensible two-part codelength; what Table 4 shows is that
+a codelength is not a critical value and was never going to serve as one.
 
-## 9.4 Calibrated crossover advantage
+*A valid threshold exists and is derivable.* Corollary 2 supplies it, at the cost
+of fixing an error rate — which is a different kind of object, obtained in a
+different way, and Section 10 keeps it separate from the code lengths.
+
+## 9.2 Calibrated comparison of structurally targeted statistics
+
+Section 8.3 establishes that this comparison is invariant to the penalties: the
+calibrated decision is $\widehat{G}_M > q_{0.95}(\widehat{G}_M \mid H_0)$
+whatever $\mathrm{pen}_M$ is. What follows is therefore a comparison of how well
+each *likelihood statistic* is targeted at orbit-structured change, and should be
+read that way. It is a real and favourable result for the constrained
+detectors — it is not evidence about the complexity law.
+
 
 **Table 6.** Median calibrated 50%-power crossover-length ratios, exact-orbit
 data. A ratio below one favours the numerator. $n$ is the number of the four
@@ -873,7 +1038,8 @@ true power is monotone in length, but it is one choice among several; isotonic
 regression or a fitted parametric power curve would be a useful sensitivity
 check, and is not performed here.
 
-## 9.5 Misspecification
+## 9.3 Misspecification
+
 
 **Table 7.** Mean calibrated power under higher-mode full-space changes at
 $L = 6{,}400$.
@@ -895,85 +1061,26 @@ This result is important: the sample-efficiency advantage of the constrained
 detectors is not a consequence of generally lower thresholds. **It is conditional
 on structural correctness.**
 
-## 9.6 The raw rule is not comparable across models
+## 9.4 Relative-shift recovery
 
-Model C's penalty does not grow with $L$, and at $g = 2$ it is exactly zero.
-Consequently its raw zero-threshold rule provides no increasing protection under
-the null. Across the production grid the mean and worst zero-threshold null rates
-were:
 
-| detector | mean | worst |
-|---|---:|---:|
-| full | 0.0053 | 0.063 |
-| fundamental | 0.0090 | 0.063 |
-| shared orbit | **0.0531** | **0.281** |
+**Table 8.** Relative-shift recovery on exact-orbit data at $L = 6{,}400$.
 
-The worst cases are at short segments and weak effects — the corner nearest orbit
-collapse. They are *not* concentrated at $g = 2$. The worst single row is
-$g = 3$, `independent_fundamental`, effect $0.08$, $L = 200$, and $g = 2$ has the
-*lowest* mean null rate of any group order:
-
-| $g$ | mean | worst |
+| $g$ | mean accuracy | minimum across effects |
 |---:|---:|---:|
-| 2 | 0.0384 | 0.275 |
-| 3 | **0.0590** | **0.281** |
-| 4 | 0.0570 | 0.208 |
-| 5 | 0.0550 | 0.177 |
-| 6 | 0.0532 | 0.139 |
+| 2 | 1.0000 | 1.000 |
+| 3 | 0.9995 | 0.998 |
+| 4 | 0.9990 | 0.996 |
+| 5 | 0.9920 | 0.974 |
+| 6 | 0.9875 | 0.958 |
 
-So the effect is not driven by $g=2$'s label cost being exactly zero; it eases as
-$g$ grows. It is the singular qualification of Section 6.3 — the relative label is
-unidentifiable at orbit collapse, at every group order — and it is precisely why
-every power comparison in this paper is made at a **common calibrated 5%** rather
-than by raw rule. Any performance claim stated on raw scores would be reading
-threshold generosity as detection ability.
+The slight decline with $g$ is expected: the detector maximises over more
+candidate shifts while adjacent orbit states become geometrically closer.
 
-**The label convention is nonetheless doing some of the damage.** Model C's
-alternative ranges over nonidentity shifts only, so it is not a proper extension
-of its own null, and $\log(g-1)$ is not the only defensible constant: a code that
-encodes $r$ uniformly over all $g$ elements, identity included, pays $\log g$.
-Recoding that way at effect $0.08$ and 100 observations per side, over 4,000
-trials at the base seed
-(`tests/test_statistical_validation.py::test_including_the_identity_in_the_label_code_cuts_the_raw_null_rate`):
+---
 
-| $g$ | $\log(g-1)$, as implemented | $\log g$, identity included |
-|---:|---:|---:|
-| 2 | 0.289 | 0.119 |
-| 3 | 0.272 | 0.182 |
-| 4 | 0.223 | 0.160 |
-| 6 | 0.125 | 0.101 |
+## 9.5 A defect in the independent-fundamental scenario
 
-A large reduction — 59% of the excess at $g=2$, falling to 19% at $g=6$ — that
-never reaches nominal at any group order. So the convention is responsible for a
-substantial part of the problem at small $g$ and not for the rest of it, which is
-the sharper form of the argument for calibration and a concrete instance of the
-$O(1)$ sensitivity Section 10 flags.
-
-## 9.7 The split fraction affects only the bounded term
-
-Section 4.2 predicts that $\rho$ moves the bounded term
-$\tfrac{d}{2}\log[\rho(1-\rho)]$ while leaving the $\log L$ coefficient at $d/2$.
-Running the $g = 4$ full-detector regression at a balanced split and at
-$\rho = 0.25$ gives slopes of 1.404 and 1.519 against a prediction of 1.5.
-
-Two qualifications, because this is the one section whose numbers are not from
-the committed run. The production grid holds $\rho = 0.5$ throughout; these
-figures come from
-`tests/test_statistical_validation.py::test_penalty_slope_is_invariant_to_the_split_fraction`,
-on exact-orbit rather than higher-mode data, over five segment lengths rather
-than six, at 300 trials per cell rather than 500 and 1,000, and with an
-acceptance band of $\pm 0.3$. That design difference, not a drift in $\rho$, is
-why 1.404 sits further from 1.5 than Table 3's 1.488 for nominally the same
-detector and group order. Adding $\rho$ to the production grid would remove the
-discrepancy.
-
-And note what is being checked. The $\rho(1-\rho)$ decomposition of Section 4.2 is
-algebraically exact — it is a rearrangement, machine-checked in `Penalty.lean` —
-so no simulation can falsify it. What the two regressions test is that the gain
-residual $s$ of Section 9.3 picks up no $\rho$-dependent $\log L$ structure of its
-own. That is a real check, and a narrower one than confirming the prediction.
-
-## 9.8 A defect in the independent-fundamental scenario
 
 Section 8.2 fixes the angular offset at 0.713 radians while the one-step rotation
 $2\pi/g$ *shrinks* as $g$ grows. The scenario therefore slides toward being an
@@ -1036,23 +1143,6 @@ the smallest distance that ray can achieve, attained at $r = \cos(\pi/g)$. It is
 the feasibility floor the implementation enforces — a target below it makes the
 discriminant negative and the scenario undefined.
 
-## 9.9 Relative-shift recovery
-
-**Table 8.** Relative-shift recovery on exact-orbit data at $L = 6{,}400$.
-
-| $g$ | mean accuracy | minimum across effects |
-|---:|---:|---:|
-| 2 | 1.0000 | 1.000 |
-| 3 | 0.9995 | 0.998 |
-| 4 | 0.9990 | 0.996 |
-| 5 | 0.9920 | 0.974 |
-| 6 | 0.9875 | 0.958 |
-
-The slight decline with $g$ is expected: the detector maximises over more
-candidate shifts while adjacent orbit states become geometrically closer.
-
----
-
 # 10. Choosing the geometry without an oracle
 
 Every efficiency figure above is an **oracle** figure — the detector matching the
@@ -1074,15 +1164,38 @@ in a single step.
 
 **The convention, stated.** "Description length" here is not a complete universal
 code, and calling these lengths *absolute* would overstate what is implemented.
-Each $L(M)$ is the BIC/Laplace expression
+Each $L(M)$ is a BIC/Laplace expression, and because Sections 10 and 11 turn
+entirely on constants the six are worth writing out rather than compressing into
+a single schema. A parameter block fitted from $k$ observations costs
+$\tfrac{d}{2}\log k$, so a model that fits a block *per segment* pays twice, at
+$L_1$ and $L_2$ separately:
 
-$$ L(M) \;=\; -\hat\ell_M \;+\; \tfrac{d_M}{2}\log L \;+\; c_M, $$
+$$
+\begin{aligned}
+L(\text{null}_{\mathrm{full}}) &= -\hat\ell_{\mathrm{full}}(\text{pooled}) + \tfrac{g-1}{2}\log L \\
+L(\text{null}_{\mathrm{fund}}) &= -\hat\ell_{\mathrm{fund}}(\text{pooled}) + \tfrac{d_{\mathrm{fund}}}{2}\log L \\
+L(\text{full}) &= -\hat\ell_{\mathrm{full}}(S_1) - \hat\ell_{\mathrm{full}}(S_2) + \tfrac{g-1}{2}\big[\log L_1 + \log L_2\big] \\
+L(\text{fund}) &= -\hat\ell_{\mathrm{fund}}(S_1) - \hat\ell_{\mathrm{fund}}(S_2) + \tfrac{d_{\mathrm{fund}}}{2}\big[\log L_1 + \log L_2\big] \\
+L(\text{orbit}) &= -\max_{r\neq e}\hat\ell_{\mathrm{fund}}(S_1 \oplus T_{-r}S_2) + \tfrac{d_{\mathrm{fund}}}{2}\log L + \log(g-1) \\
+L(\text{approx}) &= -\max_{r\neq e}\hat\ell^{\,\mathrm{pen}}_{r} + \tfrac{d_{\mathrm{fund}}}{2}\log L + \log(g-1) + \mathrm{pen}_\delta
+\end{aligned}
+$$
 
-with the structural constants $c_M$ that the models do not share: $\log(g-1)$ for
-the relative shift in Models C and D, and $\mathrm{pen}_\delta$ for D. What it
-omits is the $O(1)$ terms common to a fully specified code — the Fisher-volume
-(Jeffreys) term $\log\int\sqrt{\det I(\theta)}\,d\theta$, the parameter-space
-truncation, and the coding convention for $L$ itself.
+The $\rho$-dependence of Section 4.2 is now visible rather than hidden: the
+split models carry $\log L_1 + \log L_2 = \log L + \log[\rho(1-\rho)] + \log L$,
+so differencing against the corresponding null returns exactly
+$\mathrm{pen}_{\mathrm{split}}$, and the detector identities above hold to
+$10^{-9}$. Models C and D share the null's single $\tfrac{d_{\mathrm{fund}}}{2}\log L$
+because they fit one shared state, which is Proposition 1 in codelength form.
+
+What all six omit is the $O(1)$ terms common to a fully specified code — the
+Fisher-volume (Jeffreys) term $\log\int\sqrt{\det I(\theta)}\,d\theta$, the
+parameter-space truncation, and the coding convention for $L$ itself.
+
+**These are code lengths, and nothing here is a testing threshold.** The
+critical values of Section 6.4 answer a different question and are not
+interchangeable with the constants above; Section 9.1 is precisely the
+observation that substituting one for the other fails.
 
 Those omissions are not innocuous here, and we flag rather than hide the
 consequence. Model C's incremental cost is *already* $O(1)$, and Model D is
@@ -1277,19 +1390,27 @@ has not been performed.**
    within 0.002 nats at both. Second order is not zero, and since Model D's
    conclusions live in bounded terms of order a quarter of a nat, this is not
    negligible.
-5. **Singularity at orbit collapse.** The two-part code establishes the absence
-   of an added continuous vector but does not derive the exact singular
-   marginal-likelihood expansion.
+5. **Size control at collapse is pointwise, not uniform.** Corollary 2 gives a
+   valid asymptotic level at $h = 0$. Using it as an operating threshold needs
+   collapse to be least favourable over all local nulls; Section 6.4 provides
+   numerical evidence over the grid it evaluates — $\|h\| \leq 6$, one orbit
+   sector, $\alpha = 0.05$, $\rho = 1/2$ — and states the general case as a
+   conjecture. Nothing here establishes uniform size control, and the wording
+   throughout is "over the evaluated local-null grid" for that reason.
 6. **A label code, not a derived constant.** Model C's alternative excludes the
    identity, so it is not a proper extension of its own null, and $\log(g-1)$ is
-   one defensible convention among several. Section 9.6 measures what an
-   alternative convention does to the raw null rate; only a complete cross-model
-   code would settle the constant rather than choosing it.
-7. **Configuration-specific calibration.** Critical values are estimated
+   one defensible convention among several. Section 9.1 measures what the
+   alternatives do; only a complete cross-model code would settle the constant
+   rather than choosing it, and no constant of any kind is a testing threshold.
+7. **Calibrated power is invariant to the penalties.** The comparison of Section
+   9.2 is a comparison of likelihood statistics. It supports no claim that the
+   complexity increments cause the sample-size reduction, and the design cannot
+   be repaired to support one without abandoning calibration.
+8. **Configuration-specific calibration.** Critical values are estimated
    separately for every configuration, which is appropriate for practical power
    comparison but means calibrated crossover curves must not be used to infer the
    raw MDL coefficient.
-8. **A simulation study, and this is the largest gap.** Every result comes from
+9. **A simulation study, and this is the largest gap.** Every result comes from
    synthetic data generated by the models under test. No real dataset is
    analysed, and the cyclic-orbit assumption has not been validated empirically
    on one. The selection procedure of Section 10 has therefore never been shown
@@ -1299,25 +1420,29 @@ has not been performed.**
    frameshift application of Section 12.4 — and would do more for the argument
    than any further simulation. We regard this as the necessary next step rather
    than as future work.
-9. **Narrow exploration.** One fundamental Fourier mode and one higher-mode
+10. **Narrow exploration.** One fundamental Fourier mode and one higher-mode
    misspecification. Non-Abelian groups, representation multiplicities,
    stabilizers and approximate orbit relations beyond the single interpolation of
    Section 11 remain open. Neither independent-fundamental scenario supports a
-   cross-$g$ comparison, for the reasons of Section 9.8.
-10. **Narrow novelty claim.** Symmetry reduction, MDL dimension penalties and
+   cross-$g$ comparison, for the reasons of Section 9.5.
+11. **Narrow novelty claim.** Symmetry reduction, MDL dimension penalties and
     constrained changepoint models are established individually. The contribution
     is their explicit organisation into full independent, independent
-    invariant-subspace, shared exact-orbit and approximate-orbit hypotheses,
-    together with a matched empirical comparison.
+    invariant-subspace, shared exact-orbit and approximate-orbit hypotheses;
+    the collapse law of Section 6.4; and the negative result that follows from
+    it.
 
 ---
 
 # 14. Extensions
 
-**14.1 Stabilizer-adaptive labels.** If $\eta$ is invariant under a nontrivial
-subgroup, the orbit contains fewer than $g$ distinct states and the effective
-label cost should depend on the stabilizer order. A stabilizer-adaptive code could
-improve finite-sample behaviour near symmetric strata.
+**14.1 Stabilizer-adaptive labels, outside this family.** If $\eta$ is invariant
+under a nontrivial subgroup, the orbit contains fewer than $g$ distinct states and
+the effective label cost should depend on the stabilizer order. Section 6.3 shows
+this cannot arise in the direct model — the fundamental representation is
+faithful, so the origin is the only fixed point — so the extension is motivated
+only for nonfaithful higher modes, representation multiplicities, or non-Abelian
+groups, where a stabilizer-adaptive code would have something to adapt to.
 
 **14.2 Shrinking-effect asymptotics.** The present grid uses fixed effects. A
 triangular array with $\epsilon_L = c/\sqrt{L}$ or $c\sqrt{\log L/L}$ answers a
@@ -1333,19 +1458,19 @@ with a stopping time, raising average run length under the null, expected
 detection delay under each geometric alternative, and the cost of repeatedly
 searching over both boundary locations and relative group elements.
 
-**14.5 Singular analysis at orbit collapse.** *The highest-value extension.*
-Computing or bounding the relevant real log canonical threshold would replace the
-qualified statement of Section 9.3 with a theorem. The most direct route is a
-local analysis along $\eta_L = h/\sqrt{L}$, or a related triangular array, which
-interpolates between the regular orbit behaviour of Proposition 1 and the
-collapsed stratum.
+**14.5 Uniform size control at collapse.** *The highest-value extension.*
+Section 6.4 gives the limit law and shows numerically that exact collapse is the
+least favourable local null over the grid evaluated there. Proving
+$$ \sup_h\, q_{1-\alpha}\big(W_{g,\rho}(h)\big) \;=\; q_{1-\alpha}\big(W_{g,\rho}(0)\big) $$
+— for all $h$, and ideally for all $\rho$ and $\alpha$ — would upgrade Corollary 2
+from a pointwise statement to genuine size control, and turn the shared-orbit
+detector into a test with a guarantee rather than a threshold with evidence.
 
-It is ranked first because three separate reported anomalies are the same
-phenomenon and all sit on that stratum: the raw null rates of Section 9.6, worst
-in the weak-effect short-segment corner at every $g$; the residual slopes of
-Section 9.3, up to eight standard errors from zero and already a quantified
-target; and $g=2$'s label cost of exactly zero. Proposition 1 is a theorem about
-regular orbits, and the results keep landing where it does not apply.
+Two further pieces would follow naturally: the power of that test against
+orbit-structured local alternatives, which is the quantity Section 9.2 currently
+approaches by simulation; and the same analysis for Model D, whose deviation
+prior interacts with the collapse geometry in a way the present treatment does
+not describe.
 
 **14.6 A complete cross-model code.** Section 10's selection procedure is only as
 sound as its $O(1)$ convention. Replacing the BIC/Laplace lengths with normalised
@@ -1357,11 +1482,25 @@ highest-value extension *for the selection results specifically*.
 
 Model C's label code is the concrete case. Its alternative excludes the identity,
 so it is not a proper extension of its own null and $\log(g-1)$ is one convention
-among several; Section 9.6 measures what switching to $\log g$ does to the raw
+among several; Section 9.1 measures what switching to $\log g$ does to the raw
 null rate, and the answer is a large fraction of the excess at small $g$. A
 complete code would settle the constant rather than choosing it.
 
-**14.7 Critical-value uncertainty in the crossover intervals.** The joint
+**14.7 Relation to group-invariant e-testing.** The e-statistics of
+Pérez-Ortiz et al. [18] ask a different question — anytime-valid testing between
+two group models, with the likelihood ratio of the maximal invariant as the
+growth-rate-optimal statistic. That machinery is a plausible route to a sequential
+version of the present comparison (Extension 14.4) that would not rely on a known
+boundary or on two-part boundary coding at all.
+
+Relating the two would first require replacing Model C's maximum over shifts with
+the appropriate group average, which is a different statistic and not obviously a
+better one: Section 9.1's mixture remark shows the normalised average fires *more*
+often at collapse than the penalised maximum, and profiling $\eta$ out before
+averaging does not produce a marginal code in any case. The correspondence is
+worth establishing; it is not available for free.
+
+**14.8 Critical-value uncertainty in the crossover intervals.** The joint
 resampling of Section 9.4 accounts for the correlation between detectors, and the
 frozen effect subset keeps every replicate on one estimand, but the intervals
 still hold each configuration's empirical 95th-percentile threshold fixed. That
@@ -1370,19 +1509,11 @@ observations in the relevant tail, so the reported intervals remain too narrow.
 Retaining the null scores, or the joint null pattern alongside the alternative
 one, would let the calibration be resampled with everything else.
 
-**14.8 A data-chosen $\tau$.** Model D's prior width is fixed at $0.05$
+**14.9 A data-chosen $\tau$.** Model D's prior width is fixed at $0.05$
 throughout. Estimating $\tau$ from the data, at the cost of encoding it, is the
 natural way to ask whether Model D's narrow advantage (Section 11) widens into
 something worth the extra model class.
 
-**14.9 Relation to group-invariant e-testing.** The e-statistics of
-Pérez-Ortiz et al. [18] ask a different question — anytime-valid testing between
-two group models, with the likelihood ratio of the maximal invariant as the
-growth-rate-optimal statistic. But that machinery is a plausible route to a
-sequential version of the present comparison (Extension 14.4) that does not rely
-on a known boundary or on two-part boundary coding at all, and the maximal
-invariant for $C_g$ acting on the fundamental subspace is exactly the object
-Model C conditions on. The connection is worth developing.
 
 ---
 
@@ -1390,27 +1521,34 @@ Model C conditions on. The connection is worth developing.
 
 Cyclic structure constrains a regime-change problem in two different ways. It can
 restrict each regime independently to a low-dimensional invariant subspace, or it
-can require the regimes to be exact transforms of one shared state. For a known
+can require the regimes to be exact transforms of one shared state. At a known
 boundary these produce different leading MDL structures — $\tfrac{g-1}{2}\log L$,
-$\tfrac{d_{\mathrm{fund}}}{2}\log L$, and a constant — with the last understood as
-a two-part structural code on a regular orbit stratum.
+$\tfrac{d_{\mathrm{fund}}}{2}\log L$, and a constant.
 
-The Monte Carlo results are consistent with the full and independent-fundamental
-coefficients to within 0.03, and with a near-zero leading coefficient for the
-shared exact-orbit detector, while revealing finite-sample residuals — several of
-them many standard errors from zero — that an exact or singular coding analysis
-would be needed to explain. The decomposition
-$\text{slope} = \Delta d/2 - s$ localises those residuals in the likelihood gain
-rather than in any hidden penalty. Under matched geometry the constrained
-detectors reduce required sample length; under higher-mode misspecification the
-advantage disappears and the full detector dominates.
+The constant is the interesting case, and it is not the degenerate one it first
+appears. Orbit collapse joins $g-1$ regular branches at a point rather than
+creating a singularity, so the zero increment holds there too; what changes is
+that the profiled gain acquires a nondegenerate $O_p(1)$ law, a maximum over the
+nonidentity shifts of differences of Gaussian projection energies. That law is
+derived, validated against the detector, and does two things at once. It yields
+asymptotic critical values, making the shared-orbit statistic operational. And it
+shows that the two-part constant $\log(g-1)$ cannot control the raw rule — a
+codelength is not a critical value, and at collapse the gap between them is
+several nats.
 
-The essential conclusion is not that cyclic groups possess one universal detection
-threshold. It is that **different levels of geometric knowledge define different
-statistical questions**, whose answers carry different complexity increments — and,
-in bits, differ by whole multiples of $K^\ast$. That distinction is the correct
-foundation for future work on cyclic changepoints, phase transitions, biological
-reading frames and symmetry-aware sequential detection.
+The simulation supports this rather than carrying it. Under matched geometry the
+constrained detectors need materially less data, and under higher-mode
+misspecification that advantage vanishes; but a per-configuration penalty cancels
+from a calibrated comparison exactly, so those figures speak to the targeting of
+the likelihood statistics and not to the codes.
+
+What the framework establishes, then, is three separate things: that parameter
+dimension fixes the regular $\log L$ rate; that a shared finite-group orbit
+removes the incremental rate entirely; and that the bounded term left behind has
+a describable distribution which the natural two-part constant fails to
+accommodate. **Different levels of geometric knowledge define different
+statistical questions**, and the answers differ not only in what they cost to
+state but in whether the stated cost is enough to act on.
 
 ---
 
@@ -1431,6 +1569,7 @@ Implementation, tests and one complete production run are available at
 | Sections 10 and 11 tables | `scripts/regenerate_selection_tables.py` |
 | Block families | `regimeshift/blocks.py` |
 | Run provenance | `regimeshift/manifest.py` |
+| Collapse limit law | `regimeshift/collapse.py` |
 | Committed production run | `results/v3-production/` |
 
 The committed run ships a `run_manifest.json` recording the commit, environment,
@@ -1503,25 +1642,143 @@ within the tested grid, interpolation is performed linearly in log total length.
 Crossovers below or above the grid are flagged and excluded from slope regressions
 requiring internal estimates.
 
-# Appendix B. Reading the empirical slopes
+# Appendix B. Implementation validation: the penalty slopes
 
-The raw-score regression is the primary test of the theoretical penalty
-coefficients. Regressing the mean score on $L G_M$, $\log L$ and effect indicators
-should recover a coefficient of one on the first and $-\Delta d/2$ on the second.
-The very high $R^2$ values indicate that this affine approximation describes the
+These regressions check that the *implemented* penalties are the prescribed ones
+and that finite-sample corrections do not obscure them over the tested range.
+They are an implementation matter rather than a result, for the reason Section
+8.3 gives: the penalty is inserted into the score, so the fitted slope is
+algebraically $\Delta d/2 - s$ and the regression measures the gain residual $s$.
+They belong here rather than in Section 9, and no claim in the paper rests on
+them.
+
+## B.1 Full-model penalty
+
+
+**Table 9.** Raw-score regression estimates for the full model.
+
+| $g$ | $\hat\beta_{\mathrm{gain}}$ | slope (OLS) | slope (WLS) | predicted | $R^2$ |
+|---:|---:|---:|---:|---:|---:|
+| 4 | 0.995 | 1.488 | 1.504 | 1.500 | 0.99996 |
+| 5 | 0.983 | 1.967 | 1.994 | 2.000 | 0.99989 |
+| 6 | 0.996 | 2.488 | 2.518 | 2.500 | 0.99990 |
+
+Gain coefficients are within 1.7% of one and the observed penalty slopes follow
+the predicted increase with group order, agreeing to within 0.033 at every $g$.
+Under variance weighting the agreement is within 0.018.
+
+## B.2 Fundamental-subspace penalty
+
+
+**Table 10.** Raw-score regression estimates for the fundamental-subspace model.
+
+| $g$ | $\hat\beta_{\mathrm{gain}}$ | slope (OLS) | slope (WLS) | predicted | $R^2$ |
+|---:|---:|---:|---:|---:|---:|
+| 2 | 1.000 | 0.522 | 0.474 | 0.500 | 0.99994 |
+| 3 | 0.994 | 0.996 | 0.979 | 1.000 | 0.99959 |
+| 4 | 0.999 | 0.971 | 0.961 | 1.000 | 0.99960 |
+| 5 | 0.981 | 0.964 | 0.988 | 1.000 | 0.99931 |
+| 6 | 1.010 | 1.036 | 1.017 | 1.000 | 0.99973 |
+
+The coefficients remain approximately constant from $g=3$ through $g=6$ even
+though the full-simplex dimension grows from two to five. Read this in the terms
+Section 8.3 sets: the penalty is *inserted* into the score, so the fitted slope
+is $\Delta d/2 - s$ and the regression measures the gain residual $s$. **What the
+constancy establishes is that $s$ stays small for the fundamental family as the
+full-simplex dimension grows** — the two families are prescribed different
+complexity laws, and the finite-sample corrections do not obscure either one over
+the tested range. It is a compatibility check on the implementation, not
+independent evidence that the laws differ; that would need a fully specified
+universal code, which Section 14.3 lists and this paper does not implement. For
+$g=2$ and $g=3$ the model spaces coincide, since $d_{\mathrm{fund}} = g-1$ there;
+the informative separation begins at $g=4$.
+
+## B.3 Shared exact-orbit penalty
+
+
+**Table 11.** Residual raw-score log-length slopes for the shared-orbit model.
+
+| $g$ | $\hat\beta_{\mathrm{gain}}$ | residual slope (OLS) | (WLS) | structural prediction |
+|---:|---:|---:|---:|---:|
+| 2 | 0.991 | $-0.228$ | $-0.074$ | 0 |
+| 3 | 1.001 | 0.041 | 0.090 | 0 |
+| 4 | 1.002 | 0.083 | 0.165 | 0 |
+| 5 | 1.006 | 0.139 | 0.142 | 0 |
+| 6 | 1.004 | 0.122 | 0.179 | 0 |
+
+These residuals are far below the fundamental and full coefficients but are not
+uniformly zero, and by the run's own standard errors several are not close to
+zero either. Under variance weighting, which Section 8.3 prefers on this design,
+the distances from the structural prediction are $1.6$, $1.4$, $3.7$, $4.4$ and
+$8.0$ standard errors for $g = 2$ through $6$ — $0.179 \pm 0.022$ at $g=6$. The
+ordinary fit ranks them differently ($2.7$ at $g=2$, $3.2$ at $g=6$) but agrees
+that the largest are real. To call this small drift would understate it. The
+decomposition below is what makes the significance informative rather than
+alarming — these residuals are the maximised-likelihood gain's finite-sample
+behaviour and nothing else — but a reproducible eight-sigma departure is a
+quantified target for the singular analysis of Section 14.5, not noise to be set
+aside. The evidence supports the qualified statement:
+
+> The shared exact-orbit detector has a near-zero leading logarithmic coefficient
+> relative to the regular split models, while finite-sample score behaviour
+> retains small group-dependent drift.
+
+**Where the residual comes from.** Because this implementation subtracts a
+penalty it computes *exactly*, the gain and penalty coefficients need not be
+estimated jointly. Writing the mean raw gain as $L G + a + s\log L$ and the exact
+penalty as $\tfrac{\Delta d}{2}\log L + c$, the fitted slope satisfies the
+algebraic identity
+
+$$ \text{penalty slope} \;=\; \frac{\Delta d}{2} \;-\; s , $$
+
+verified to $10^{-8}$. For Model C, $\Delta d = 0$, so **the residual slopes of
+Table 11 are $-s$ and nothing else** — a property of the maximised likelihood gain
+(shift maximisation and finite-sample MLE bias), not evidence of a hidden
+continuous-dimension penalty.
+
+## B.4 The split fraction affects only the bounded term
+
+
+Section 4.2 predicts that $\rho$ moves the bounded term
+$\tfrac{d}{2}\log[\rho(1-\rho)]$ while leaving the $\log L$ coefficient at $d/2$.
+Running the $g = 4$ full-detector regression at a balanced split and at
+$\rho = 0.25$ gives slopes of 1.404 and 1.519 against a prediction of 1.5.
+
+Two qualifications, because this is the one section whose numbers are not from
+the committed run. The production grid holds $\rho = 0.5$ throughout; these
+figures come from
+`tests/test_statistical_validation.py::test_penalty_slope_is_invariant_to_the_split_fraction`,
+on exact-orbit rather than higher-mode data, over five segment lengths rather
+than six, at 300 trials per cell rather than 500 and 1,000, and with an
+acceptance band of $\pm 0.3$. That design difference, not a drift in $\rho$, is
+why 1.404 sits further from 1.5 than Table 9's 1.488 for nominally the same
+detector and group order. Adding $\rho$ to the production grid would remove the
+discrepancy.
+
+And note what is being checked. The $\rho(1-\rho)$ decomposition of Section 4.2 is
+algebraically exact — it is a rearrangement, machine-checked in `Penalty.lean` —
+so no simulation can falsify it. What the two regressions test is that the gain
+residual $s$ of Section B.3 picks up no $\rho$-dependent $\log L$ structure of its
+own. That is a real check, and a narrower one than confirming the prediction.
+
+## B.5 Reading the slopes
+
+Regressing the mean score on $L G_M$, $\log L$ and effect indicators should
+recover a coefficient of one on the first and $-\Delta d/2$ on the second. The
+very high $R^2$ values indicate that this affine approximation describes the
 simulated mean scores over the tested grid.
 
 Each group-level regression uses only 24 aggregate design points of unequal Monte
-Carlo precision, so both ordinary and inverse-variance-weighted fits are reported.
-On this grid the two agree to within 0.05 for the constrained detectors; the
-largest disagreement is 0.03 for the full detector, and weighting moves the
-estimate *toward* prediction in every case.
+Carlo precision, so both ordinary and inverse-variance-weighted fits are
+reported. On this grid the two agree to within 0.05 for the constrained
+detectors; the largest disagreement is 0.03 for the full detector, and weighting
+moves the estimate *toward* prediction in every case.
 
-The calibrated-power crossover slopes answer a different question. Configuration-
-specific null calibration adds an empirical threshold that may itself vary with
-length, so those crossovers are appropriate for comparing practical sample
-requirements at a common false-positive target but their slopes are not expected
-to equal the raw MDL coefficient.
+The calibrated-power crossover slopes of Section 9.2 answer a different question
+again. Configuration-specific null calibration adds an empirical threshold that
+may itself vary with length, so those crossovers are appropriate for comparing
+practical sample requirements at a common false-positive target but their slopes
+are not expected to equal the raw MDL coefficient.
 
 # Appendix C. Relation to the broader geometric framework
 
