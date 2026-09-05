@@ -152,20 +152,71 @@ profiled functional is never at a transition.
 
 ---
 
-## 4. Open
+## 4. The conjectured sign law is false
 
-The sign law `K_m(s, rho_c^- s) > 0` and `K_m(s, rho_c^+ s) < 0` is what would
-turn the quartic classification into a theorem on this slice. It holds in every case I
-confirmed: `m = 4, 6, 10` at `s = 1`, `m = 4, 10` at `s = 4` (the table above,
-where `K_m = -m s^4 D^4A`), and `m = 4, 5, 6` at `s = 0.25`. A wider sweep is
-what `scripts/quartic_four_cycle.py --part signs` runs; it is slow at large
-`m`, and I have not seen it through. Either way it is a numerical observation,
-not a proof. Proving it means reducing `K_m` through the Mills recurrence the
-way Theorem 2 reduces `I_m`, then using the root condition `I_m = 0` — the same
-programme, one order up, and the natural next theorem.
+`K_m(s, rho_c^- s) > 0` held in every case I tested. **`K_m(s, rho_c^+ s) < 0`
+does not.** It fails for all `m` past a finite threshold:
 
-Beyond that, the generic quartic (not just along the four-cycle) would need the
-full `Sym^4` invariant decomposition of `H_0`, which has more than the two
+| s | 0.25 | 1 | 4 | 9 |
+|---|---|---|---|---|
+| `K_m(rho_c^+) < 0` holds up to | m = 11 | m = 10 | m = 11 | m = 25 |
+| first `m` with `K_m(rho_c^+) > 0` | 12 | 11 | 12 | 30 or below |
+
+At `s = 1`: `K(9) = -0.02741`, `K(10) = -0.007934`, `K(11) = +0.007972`,
+`K(12) = +0.02112`, rising to `+0.0492` at `m = 15`, `+0.0878` at `m = 25`,
+`+0.0984` at `m = 60`. Two independent runs give the same threshold. This is
+not a quadrature artifact: a peak-centred quadrature agrees with the
+`b`-centred one to every printed digit at `m = 10 ... 40`, and the roots are
+genuine sign changes of `I_m` (`+0.001048` just below, `-0.0008679` just above,
+at `m = 25, s = 1`, with `I_m` still negative out at `rho = 10`).
+
+**There is a structural reason, and it does not depend on the numerics.** Split
+
+```
+K_m = (m-4) * Idd  +  4 * Icd,     Idd = int W_b D^2,   Icd = int W_b C D.
+```
+
+`Idd > 0` always: the integrand is a positive weight times a square, and `D` is
+not identically zero. So `K_m` carries a strictly positive part that grows
+linearly in `m`, and the law can only survive while `Icd` is negative enough to
+cancel it. At `rho_c^+` it is not, for two compounding reasons — `Idd` shrinks
+only slowly while `(m-4) Idd` grows, and `Icd` itself changes sign:
+
+| m (s = 1) | `rho_c^+` | `Idd` | `Icd` | `(m-4) Idd` | `K_m` |
+|---|---|---|---|---|---|
+| 6 | 3.404000 | 0.00663072 | -0.0338309 | 0.0132614 | -0.122062 |
+| 10 | 3.571773 | 0.00433014 | -0.00847865 | 0.0259809 | -0.00793374 |
+| 12 | 3.634812 | 0.0037215 | -0.00216204 | 0.029772 | +0.0211238 |
+| 15 | 3.713795 | 0.00308713 | **+0.00382351** | 0.0339585 | +0.0492525 |
+| 25 | 3.900524 | 0.00198007 | +0.0115577 | 0.0415815 | +0.0878123 |
+| 60 | 4.231599 | 0.000838813 | +0.0128544 | 0.0469735 | +0.0983911 |
+
+Past `m = 12` or so both terms are positive and there is nothing left to make
+`K_m` negative. So no reduction through the Mills recurrence is going to prove
+`K_m(rho_c^+) < 0`; the statement is simply not true. The `rho_c^-` half looks
+robust for the same reason read forwards — there `Icd > 0` as well, so both
+terms push the same way.
+
+Two consequences for Sections 10 and 13.
+
+* For `m >= 11` (at `s = 1`), `K_m > 0` at *both* transitions, so `D^4 A < 0`
+  at both: the simplex is quartically **maximizing** along the four-cycle at
+  `rho_c^+` too, not minimizing. The "mirror versions in curvature" reading of
+  the two crossings holds only for small `m`.
+* The bifurcation side flips with it. At `rho_c^+` we have `a > 0` (since
+  `I'_rho < 0` there); once `K_m > 0`, `b = -K_m/(24 m s^4) < 0`, so `a/b < 0`
+  and `eps^2 = -(a/2b) mu > 0` requires `mu > 0` — the opposite side from the
+  small-`m` case.
+
+What survives is the derivation, which is exact, and the small-`m` picture. The
+right open question is not "prove the sign law" but "for which `(m,s)` is
+`K_m(rho_c^+)` negative" — the threshold curve `m*(s)`, which the table above
+says is increasing in `s`.
+
+## 5. Also open
+
+The generic quartic (not just along the four-cycle) would need the full
+`Sym^4` invariant decomposition of `H_0`, which has more than the two
 invariants that appear at third order.
 
 Reproduce with:
@@ -173,4 +224,5 @@ Reproduce with:
 ```bash
 python scripts/quartic_four_cycle.py                    # all parts
 python scripts/quartic_four_cycle.py --part finite-diff # the end-to-end check
+python scripts/quartic_four_cycle.py --part signs       # the failure and its cause
 ```

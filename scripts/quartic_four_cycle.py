@@ -169,7 +169,11 @@ def _bisect(f, lo, hi, iters=60):
 
 
 def sign_law(ss=(0.25, 1.0, 4.0, 9.0), ms=(4, 5, 6, 10, 25)):
-    """K_m > 0 at rho_c^- and K_m < 0 at rho_c^+ ?"""
+    """K_m > 0 at rho_c^- and K_m < 0 at rho_c^+ ?
+
+    The second half is FALSE. See ``K_pieces`` for why: K_m has a manifestly
+    positive part that grows linearly in m.
+    """
     from curvature_conjectures import I_closed
     rows, ok = [], True
     for s in ss:
@@ -183,6 +187,36 @@ def sign_law(ss=(0.25, 1.0, 4.0, 9.0), ms=(4, 5, 6, 10, 25)):
             ok &= good
             rows.append((m, s, float(r1), k1, float(r2), k2, good))
     return rows, ok
+
+
+def K_pieces(s, x, m, width=40):
+    """Split K_m = (m-4) * Idd + 4 * Icd,  Idd = int W_b D^2,  Icd = int W_b C D.
+
+    Idd > 0 always, since D^2 >= 0 and D is not identically zero. So the first
+    part is strictly positive and grows linearly in m, which is why
+    K_m(rho_c^+) < 0 cannot survive large m.
+    """
+    s, x = mpf(s), mpf(x)
+    n = m - 1
+    b = sqrt(s) + x/sqrt(s)
+    h = x/sqrt(s)
+    W = lambda t: exp(-(t-b)**2/2 - log(2*mp.pi)/2 + n*log(_Phi(t)))
+    pts = [b-width, b-6, b-1, b+1, b+6, b+width]
+    return (quad(lambda t: W(t)*D_factor(t)**2, pts),
+            quad(lambda t: W(t)*C_factor(t, h)*D_factor(t), pts))
+
+
+def sign_law_breakdown(ss=(1.0,), ms=(6, 10, 12, 15, 25, 60)):
+    """The two pieces of K_m at rho_c^+, showing where and why the law fails."""
+    from curvature_conjectures import I_closed
+    rows = []
+    for s in ss:
+        for m in ms:
+            r2 = _bisect(lambda r: I_closed(r, s, m-1), 1.01, 14.0)
+            idd, icd = K_pieces(s, float(r2)*s, m)
+            rows.append((m, s, float(r2), float(idd), float(icd),
+                         float((m-4)*idd + 4*icd)))
+    return rows
 
 
 def main(argv=None):
@@ -220,11 +254,18 @@ def main(argv=None):
         print()
     if run('signs'):
         print("sign law: K_m(rho_c^-) > 0 and K_m(rho_c^+) < 0")
+        print("   (the second half is FALSE at large m -- see the breakdown below)")
         rows, ok = sign_law()
         for m, s, r1, k1, r2, k2, good in rows:
             print("   m=%-4d s=%-6s rho_c^-=%-10.6f K=%-14.6g rho_c^+=%-10.6f "
                   "K=%-14.6g %s" % (m, s, r1, k1, r2, k2, "OK" if good else "FAIL"))
         print("   holds in every case:", ok)
+        print()
+        print("   K_m = (m-4)*Idd + 4*Icd at rho_c^+;  Idd = int W D^2 > 0 always")
+        print("   %-4s %-5s %-11s %-14s %-14s %-14s"
+              % ('m', 's', 'rho_c^+', 'Idd (>0)', 'Icd', 'K_m'))
+        for row in sign_law_breakdown():
+            print("   %-4d %-5s %-11.6f %-14.6g %-14.6g %-14.6g" % row)
 
 
 if __name__ == '__main__':
