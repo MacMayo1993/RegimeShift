@@ -157,10 +157,10 @@ profiled functional is never at a transition.
 `K_m(s, rho_c^- s) > 0` held in every case I tested. **`K_m(s, rho_c^+ s) < 0`
 does not.** It fails for all `m` past a finite threshold:
 
-| s | 0.25 | 1 | 4 | 9 |
-|---|---|---|---|---|
-| `K_m(rho_c^+) < 0` holds up to | m = 11 | m = 10 | m = 11 | m = 25 |
-| first `m` with `K_m(rho_c^+) > 0` | 12 | 11 | 12 | 30 or below |
+| s | 0.25 | 1 | 4 | 9 | 25 |
+|---|---|---|---|---|---|
+| `K_m(rho_c^+) < 0` holds up to | m = 11 | m = 10 | m = 11 | m = 25 | m = 59 |
+| first `m` with `K_m(rho_c^+) > 0` | 12 | 11 | 12 | 26 | 60 |
 
 At `s = 1`: `K(9) = -0.02741`, `K(10) = -0.007934`, `K(11) = +0.007972`,
 `K(12) = +0.02112`, rising to `+0.0492` at `m = 15`, `+0.0878` at `m = 25`,
@@ -210,8 +210,12 @@ Two consequences for Sections 10 and 13.
 
 What survives is the derivation, which is exact, and the small-`m` picture. The
 right open question is not "prove the sign law" but "for which `(m,s)` is
-`K_m(rho_c^+)` negative" — the threshold curve `m*(s)`, which the table above
-says is increasing in `s`.
+`K_m(rho_c^+)` negative" — the threshold curve `m*(s)`. It is not monotone at
+the small-`s` end (12, 11, 12 at `s = 0.25, 1, 4`) but grows steadily after
+that (26 at `s = 9`, 60 at `s = 25`), so the law is worst at moderate `s` and
+the four-cycle quartic keeps its small-`m` sign longer as the drift grows. The
+`s = 25` row sits at `|K| ~ 1e-17` in absolute terms; the crossing there is
+clean in the quadrature but is the least comfortable row in the table.
 
 ## 5. Also open
 
