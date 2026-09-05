@@ -155,10 +155,12 @@ profiled functional is never at a transition.
 ## 4. Open
 
 The sign law `K_m(s, rho_c^- s) > 0` and `K_m(s, rho_c^+ s) < 0` is what would
-turn the quartic classification into a theorem on this slice. It is unrefuted
-in every case tested (`scripts/quartic_four_cycle.py --part signs`, over
-`s` in {0.25, 1, 4, 9} and `m` in {4, 5, 6, 10, 25}), but it is a numerical
-observation. Proving it means reducing `K_m` through the Mills recurrence the
+turn the quartic classification into a theorem on this slice. It holds in every case I
+confirmed: `m = 4, 6, 10` at `s = 1`, `m = 4, 10` at `s = 4` (the table above,
+where `K_m = -m s^4 D^4A`), and `m = 4, 5, 6` at `s = 0.25`. A wider sweep is
+what `scripts/quartic_four_cycle.py --part signs` runs; it is slow at large
+`m`, and I have not seen it through. Either way it is a numerical observation,
+not a proof. Proving it means reducing `K_m` through the Mills recurrence the
 way Theorem 2 reduces `I_m`, then using the root condition `I_m = 0` — the same
 programme, one order up, and the natural next theorem.
 
